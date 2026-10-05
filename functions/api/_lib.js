@@ -324,10 +324,11 @@ function renderArchitecture(d) {
   if (d.hasImage) {
     const imgBlock = `<img src="/api/img/architecture?v=${d.imageVer}" alt="${d.name}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center 35%;display:block;"
          onerror="this.style.display='none';document.getElementById('archFallback').style.display='flex';">`;
-    const fontHead = `<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/cn-fontsource-lxgw-wen-kai-screen/font.css">`;
     const archFont = `'LXGW WenKai Screen','LXGW WenKai',${s.fontFamily}`;
+    const fontFace = `@font-face { font-family:'LXGW WenKai Screen'; src:url('/fonts/lxgw-wenkai-screen-subset.woff2') format('woff2'); font-weight:400; font-style:normal; font-display:swap; }`;
     return pageShell("古建筑",
-      `* { margin: 0; padding: 0; box-sizing: border-box; }
+      `${fontFace}
+       * { margin: 0; padding: 0; box-sizing: border-box; }
        html, body { width: 800px; height: 480px; overflow: hidden; font-family: ${archFont}; background: ${s.bg}; color: ${s.text}; }`,
       `
   <div style="width:800px;height:480px;background:${s.bg};display:flex;flex-direction:column;">
@@ -343,12 +344,14 @@ function renderArchitecture(d) {
       <span style="font-size:28px;font-weight:bold;letter-spacing:2px;">${d.name}</span>
       <span style="font-size:18px;opacity:.94;">${d.era} · ${d.location}</span>
     </div>
-  </div>`, fontHead);
+  </div>`);
   }
   // 无图降级：accent 名称栏 + 引文居中（同样应用文楷）
   const archFont = `'LXGW WenKai Screen','LXGW WenKai',${s.fontFamily}`;
+  const fontFace = `@font-face { font-family:'LXGW WenKai Screen'; src:url('/fonts/lxgw-wenkai-screen-subset.woff2') format('woff2'); font-weight:400; font-style:normal; font-display:swap; }`;
   return pageShell("古建筑",
-    `* { margin: 0; padding: 0; box-sizing: border-box; }
+    `${fontFace}
+     * { margin: 0; padding: 0; box-sizing: border-box; }
      html, body { width: 800px; height: 480px; overflow: hidden; font-family: ${archFont}; background: ${s.bg}; color: ${s.text}; }`,
     `
   <div style="width:800px;height:480px;background:${s.bg};display:flex;">
