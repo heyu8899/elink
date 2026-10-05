@@ -322,7 +322,7 @@ function renderArchitecture(d) {
   // 有图：古籍全竖排——左竖图（零遮挡）、右侧一列列从右往左：引文 → 出处 → 界栏线 → 名称 → 年代地点
   // 字体：京华老宋体（雕版宋复刻），文楷兜底
   if (d.hasImage) {
-    const imgBlock = `<img src="/api/img/architecture?v=${d.imageVer}" alt="${d.name}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center 45%;display:block;"
+    const imgBlock = `<img src="/api/img/architecture?v=${d.imageVer}" alt="${d.name}" style="position:absolute;width:128%;height:128%;left:-15%;top:-13%;object-fit:cover;object-position:center;display:block;"
          onerror="this.style.display='none';document.getElementById('archFallback').style.display='flex';">`;
     const archFont = `'KingHwa OldSong','LXGW WenKai Screen',${s.fontFamily}`;
     const fontFace = `@font-face { font-family:'KingHwa OldSong'; src:url('/fonts/kinghwa-oldsong-subset.woff2') format('woff2'); font-weight:400; font-style:normal; font-display:swap; }
