@@ -466,10 +466,10 @@ export async function genArchitecture(dateStr, env) {
   const { data, style } = await genDeduped(env.DASHBOARD_KV, "architecture", env,
     `请随机选一座中国著名古建筑（避开最常见的故宫/长城），返回严格 JSON：{"name":"名称","location":"所在地","era":"年代","desc":"约90字的介绍","highlight":"一个看点，不超过20字","imagePrompt":"英文提示词，描述该古建筑的标志性外观与周围环境，简洁的扁平插画风格场景构图，30个英文单词以内"}`);
 
-  // 与地标页共用生图管线：图片字节落 KV img:architecture
+  // 与地标页共用生图管线，但风格走「手绘线描淡彩」而非六色扁平
   let hasImage = false;
   try {
-    await genImage(`${data.imagePrompt}. ${E6_STYLE_PROMPT}`, env, "architecture");
+    await genImage(`${data.imagePrompt}. ${ARCH_STYLE_PROMPT}`, env, "architecture");
     hasImage = true;
   } catch (e) {
     console.error("古建筑生图失败，页面使用占位版式:", String(e));
@@ -495,6 +495,14 @@ const E6_STYLE_PROMPT =
   "thick shapes, e-ink poster style, landscape 5:3";
 
 const IMAGE_SIZE = "1280x768"; // 5:3 比例生成，展示时缩放为 800x480
+
+// 古建筑页专属风格：手绘线描 + 淡彩写生（用户提供的建筑设定稿参考），
+// 与地标的扁平六色插画刻意区分。线描要求"自信粗线"以适应墨水屏缩放后的可读性。
+const ARCH_STYLE_PROMPT =
+  "traditional Chinese architecture concept sketch, fine ink line drawing with light watercolor wash, " +
+  "muted ochre, grey-tile and pale green tones on aged off-white paper, " +
+  "hand-drawn study of an ancient Chinese building, loose confident linework, subtle ink shading, " +
+  "high contrast lines, single composition, no modern elements, landscape 5:3";
 
 /**
  * 生图并把**图片字节落地到 KV**。
