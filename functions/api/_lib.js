@@ -162,7 +162,7 @@ async function genDeduped(kv, page, env, basePrompt) {
   const finalTopic = topicOf(data);
   if (finalTopic) await pushHistory(kv, page, finalTopic);
 
-  return { data, style: cfg.style };
+  return { data, style: cfg.style, extraPrompt: cfg.extraPrompt };
 }
 
 // ---------- 认证（会话 Cookie + 管理密钥双轨） ----------
@@ -462,19 +462,48 @@ export async function genWeather(dateStr, env) {
   });
 }
 
-export async function genArchitecture(dateStr, env) {
-  const { data, style } = await genDeduped(env.DASHBOARD_KV, "architecture", env,
-    `请随机选一座中国著名古建筑（避开最常见的故宫/长城），返回严格 JSON：{"name":"名称","location":"所在地","era":"年代","desc":"约90字的介绍","highlight":"一个看点，不超过20字","imagePrompt":"英文提示词，描述该古建筑的标志性外观与周围环境，简洁的扁平插画风格场景构图，30个英文单词以内"}`);
+// 两步法开关：true = 先定主题，再把主题文字单独喂给 GLM 翻译成画面描述（主题与画面解耦，
+// 换画风只动第二步）；false = 一步法（选主题时顺带产出 imagePrompt，省一次调用）。
+// 回退：把 true 改成 false 即回到一步法。
+const TWO_STEP_IMAGE = true;
 
-  // 与地标页共用生图管线，但风格走「手绘线描淡彩」而非六色扁平
+// 两步法第二步：把主题文字单独翻译成英文画面描述
+async function translateImagePrompt(env, topicText, extraPrompt) {
+  const raw = await glm(withExtra(
+    `为文生图模型写一段英文画面描述。主题：${topicText}。` +
+    `要求：描述标志性外观、材质与周围环境，简洁的插画风格场景构图，30 个英文单词以内。` +
+    `直接返回英文描述本身，不要解释、不要引号。`,
+    extraPrompt
+  ), env);
+  return raw.trim().replace(/^["']+|["']+$/g, "");
+}
+
+const ONE_STEP_ARCH_PROMPT =
+  `请随机选一座中国著名古建筑（避开最常见的故宫/长城），返回严格 JSON：{"name":"名称","location":"所在地","era":"年代","desc":"约90字的介绍","highlight":"一个看点，不超过20字","imagePrompt":"英文提示词，描述该古建筑的标志性外观与周围环境，简洁的扁平插画风格场景构图，30个英文单词以内"}`;
+
+const TWO_STEP_ARCH_PROMPT =
+  `请随机选一座中国著名古建筑（避开最常见的故宫/长城），返回严格 JSON：{"name":"名称","location":"所在地","era":"年代","desc":"约90字的介绍","highlight":"一个看点，不超过20字"}。`;
+
+export async function genArchitecture(dateStr, env) {
+  const { data, style, extraPrompt } = await genDeduped(env.DASHBOARD_KV, "architecture", env,
+    TWO_STEP_IMAGE ? TWO_STEP_ARCH_PROMPT : ONE_STEP_ARCH_PROMPT);
+
   let hasImage = false;
+  const imageVer = String(Date.now());
   try {
-    await genImage(`${data.imagePrompt}. ${ARCH_STYLE_PROMPT}`, env, "architecture");
+    let imagePrompt = data.imagePrompt;
+    if (TWO_STEP_IMAGE) {
+      // 两步法：主题与画面解耦，主题文字单独翻译成画面描述
+      const topic = `${data.name}（${data.era}，位于${data.location}）。${data.desc}`;
+      imagePrompt = await translateImagePrompt(env, topic, extraPrompt);
+    }
+    if (!imagePrompt) throw new Error("缺少画面描述");
+
+    await genImage(`${imagePrompt}. ${ARCH_STYLE_PROMPT}`, env, "architecture");
     hasImage = true;
   } catch (e) {
     console.error("古建筑生图失败，页面使用占位版式:", String(e));
   }
-  const imageVer = String(Date.now());
   return renderArchitecture({ date: dateStr, style, hasImage, imageVer, ...data });
 }
 
