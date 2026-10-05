@@ -10,7 +10,7 @@
  */
 
 const GLM_URL = "https://open.bigmodel.cn/api/paas/v4/chat/completions";
-const MODEL = "glm-4.7-flash"; // 便宜够用；想要更好文案换 glm-4-plus
+const MODEL = "glm-5.3-flash"; // 付费模型（0.8/2.8元每百万tokens），带 429 自动重试
 
 // ---------- 页面模板（框架定死，只换内容） ----------
 
