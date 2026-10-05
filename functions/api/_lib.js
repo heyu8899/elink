@@ -319,16 +319,18 @@ function renderWeather(d) {
 
 function renderArchitecture(d) {
   const s = d.style;
-  // 有图：顶图横幅版式（CogView 横图裁横条最自然），名称牌用 accent 压在图上
+  // 有图：顶图横幅版式 + 双栏报纸排版（首字下沉），中缝虚线呼应排印主题
   if (d.hasImage) {
-    const imgBlock = `<img src="/api/img/architecture?v=${d.imageVer}" alt="${d.name}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;"
+    const imgBlock = `<img src="/api/img/architecture?v=${d.imageVer}" alt="${d.name}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center 30%;display:block;"
          onerror="this.style.display='none';document.getElementById('archFallback').style.display='flex';">`;
     return pageShell("古建筑",
       `* { margin: 0; padding: 0; box-sizing: border-box; }
-       html, body { width: 800px; height: 480px; overflow: hidden; font-family: ${s.fontFamily}; background: ${s.bg}; color: ${s.text}; }`,
+       html, body { width: 800px; height: 480px; overflow: hidden; font-family: ${s.fontFamily}; background: ${s.bg}; color: ${s.text}; }
+       .arch-desc { column-count:2; column-gap:34px; column-rule:1px dashed ${s.text}40; }
+       .arch-desc::first-letter { float:left; font-size:2.1em; line-height:1; padding:3px 10px 0 0; color:${s.accent}; font-weight:700; }`,
       `
   <div style="width:800px;height:480px;background:${s.bg};display:flex;flex-direction:column;">
-    <div style="position:relative;height:262px;flex-shrink:0;background:${s.accent};">
+    <div style="position:relative;height:272px;flex-shrink:0;background:${s.accent};">
       <div id="archFallback" style="width:100%;height:100%;display:none;align-items:center;justify-content:center;font-size:64px;font-weight:bold;color:${s.bg};">${d.name}</div>
       ${imgBlock}
       <div style="position:absolute;top:0;left:0;background:${s.accent};color:${s.bg};padding:7px 18px;font-size:${s.bodySize}px;letter-spacing:4px;font-weight:bold;">每日古建筑</div>
@@ -337,11 +339,11 @@ function renderArchitecture(d) {
         <div style="font-size:${s.bodySize}px;margin-top:2px;opacity:.92;">${d.era} · ${d.location}</div>
       </div>
     </div>
-    <div style="flex:1;padding:20px 42px 0;display:flex;flex-direction:column;">
-      <div style="font-size:${s.bodySize + 4}px;line-height:1.7;font-weight:bold;text-align:justify;">${d.desc}</div>
+    <div style="flex:1;padding:24px 44px 0;display:flex;flex-direction:column;">
+      <div class="arch-desc" style="font-size:${s.bodySize + 3}px;line-height:1.8;font-weight:bold;text-align:justify;">${d.desc}</div>
       <div style="margin-top:auto;margin-bottom:18px;padding-top:12px;border-top:1px dashed ${s.text}55;display:flex;justify-content:space-between;align-items:baseline;">
         <span style="font-size:${s.bodySize}px;font-weight:bold;color:${s.accent};">看点 · ${d.highlight}</span>
-        <span style="font-size:${s.bodySize - 1}px;color:${s.text};opacity:.5;">${d.date}</span>
+        <span style="font-family:var(--mono);font-size:${s.bodySize - 2}px;color:${s.text};opacity:.5;">${d.date}</span>
       </div>
     </div>
   </div>`);
