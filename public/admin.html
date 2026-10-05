@@ -122,6 +122,7 @@
     <div class="row" style="margin-top:8px">
       <span class="muted">随机展示（每天自动换一张，当天内固定）：</span><code id="randomUrl"></code>
       <button onclick="copyRandom()">复制</button>
+      <button onclick="rebuildIndex()">重建索引</button>
     </div>
     <div class="row">
       <span class="muted">每次访问都随机：</span><code id="randomUrlEach"></code>
@@ -424,6 +425,14 @@ function copyRandom() {
 function copyRandomEach() {
   const t = document.getElementById("randomUrlEach").textContent;
   navigator.clipboard.writeText(t).then(() => setPicMsg("已复制：" + t, "ok")).catch(() => setPicMsg("复制失败：" + t, "err"));
+}
+
+async function rebuildIndex() {
+  setPicMsg("正在重建索引（枚举 KV 真实键）…");
+  const { ok, status, data } = await jfetch("/api/pic?rebuild=1");
+  if (status === 403) return showLogin();
+  setPicMsg(ok ? `索引已重建，共 ${data.rebuilt} 张图` : (data.error || "重建失败"), ok ? "ok" : "err");
+  if (ok) loadPics();
 }
 
 async function uploadPics() {

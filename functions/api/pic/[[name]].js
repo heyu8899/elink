@@ -50,6 +50,27 @@ export async function onRequestGet({ params, request, env }) {
     if (!(await requireAdmin(request, env))) {
       return new Response("forbidden", { status: 403 });
     }
+    // ?rebuild=1：直接枚举 KV 里 pic: 前缀的真实键，重建索引
+    // （索引是读改写模式，并发/多端上传可能互相覆盖丢条目；KV list 是 ground truth）
+    if (new URL(request.url).searchParams.get("rebuild") === "1") {
+      const out = [];
+      let cursor;
+      do {
+        const page = await kv.list({ prefix: "pic:", cursor });
+        for (const k of page.keys) {
+          if (k.name === "pic:index") continue;
+          out.push({
+            name: k.name.slice(4),
+            size: k.metadata?.size || 0,
+            contentType: k.metadata?.contentType || "application/octet-stream",
+            updatedAt: k.metadata?.updatedAt || "",
+          });
+        }
+        cursor = page.list_complete ? undefined : page.cursor;
+      } while (cursor);
+      await kv.put("pic:index", JSON.stringify(out));
+      return jsonResponse({ ok: true, rebuilt: out.length, items: out });
+    }
     const raw = await kv.get("pic:index");
     let items = [];
     try { items = raw ? JSON.parse(raw) : []; } catch { /* 索引损坏视为空 */ }
