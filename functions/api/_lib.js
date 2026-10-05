@@ -267,10 +267,10 @@ export async function shouldRunNow(kv) {
 
 // ---------- 页面模板（框架定死，只换内容；颜色字号走配置） ----------
 
-function pageShell(title, baseStyleCss, bodyHtml) {
+function pageShell(title, baseStyleCss, bodyHtml, extraHead = "") {
   return `<!DOCTYPE html><html><head><meta charset="utf-8">
 <meta name="viewport" content="width=800, initial-scale=1, user-scalable=no">
-<title>${title}</title><style>${baseStyleCss}</style></head>
+<title>${title}</title>${extraHead}<style>${baseStyleCss}</style></head>
 <body>${bodyHtml}</body></html>`;
 }
 
@@ -320,12 +320,15 @@ function renderWeather(d) {
 function renderArchitecture(d) {
   const s = d.style;
   // 有图：图区零遮挡 → 古籍引文（大字居中 + 出处）→ 底部名称条（名称 · 年代 · 地点）
+  // 字体：霞鹜文楷屏显版（写刻本楷体，古籍气质），CDN 加载失败时回退 Noto Serif SC
   if (d.hasImage) {
     const imgBlock = `<img src="/api/img/architecture?v=${d.imageVer}" alt="${d.name}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center 35%;display:block;"
          onerror="this.style.display='none';document.getElementById('archFallback').style.display='flex';">`;
+    const fontHead = `<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/cn-fontsource-lxgw-wen-kai-screen/font.css">`;
+    const archFont = `'LXGW WenKai Screen','LXGW WenKai',${s.fontFamily}`;
     return pageShell("古建筑",
       `* { margin: 0; padding: 0; box-sizing: border-box; }
-       html, body { width: 800px; height: 480px; overflow: hidden; font-family: ${s.fontFamily}; background: ${s.bg}; color: ${s.text}; }`,
+       html, body { width: 800px; height: 480px; overflow: hidden; font-family: ${archFont}; background: ${s.bg}; color: ${s.text}; }`,
       `
   <div style="width:800px;height:480px;background:${s.bg};display:flex;flex-direction:column;">
     <div style="position:relative;height:300px;flex-shrink:0;background:${s.accent};">
@@ -334,18 +337,19 @@ function renderArchitecture(d) {
     </div>
     <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0 36px;text-align:center;">
       <div style="font-size:31px;font-weight:bold;letter-spacing:3px;line-height:1.6;">「${d.quote}」</div>
-      <div style="margin-top:10px;font-size:18px;color:${s.text};opacity:.78;letter-spacing:3px;">—— ${d.source}</div>
+      <div style="margin-top:10px;font-size:20px;font-weight:700;color:${s.text};opacity:.9;letter-spacing:3px;">—— ${d.source}</div>
     </div>
     <div style="height:66px;flex-shrink:0;background:${s.accent};color:${s.bg};display:flex;justify-content:space-between;align-items:center;padding:0 30px;">
       <span style="font-size:28px;font-weight:bold;letter-spacing:2px;">${d.name}</span>
       <span style="font-size:18px;opacity:.94;">${d.era} · ${d.location}</span>
     </div>
-  </div>`);
+  </div>`, fontHead);
   }
-  // 无图降级：accent 名称栏 + 引文居中
+  // 无图降级：accent 名称栏 + 引文居中（同样应用文楷）
+  const archFont = `'LXGW WenKai Screen','LXGW WenKai',${s.fontFamily}`;
   return pageShell("古建筑",
     `* { margin: 0; padding: 0; box-sizing: border-box; }
-     html, body { width: 800px; height: 480px; overflow: hidden; font-family: ${s.fontFamily}; background: ${s.bg}; color: ${s.text}; }`,
+     html, body { width: 800px; height: 480px; overflow: hidden; font-family: ${archFont}; background: ${s.bg}; color: ${s.text}; }`,
     `
   <div style="width:800px;height:480px;background:${s.bg};display:flex;">
     <div style="width:340px;background:${s.accent};color:${s.bg};padding:40px 32px;box-sizing:border-box;display:flex;flex-direction:column;">
@@ -355,7 +359,7 @@ function renderArchitecture(d) {
     </div>
     <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0 40px;text-align:center;">
       <div style="font-size:24px;font-weight:bold;letter-spacing:3px;line-height:1.7;">「${d.quote}」</div>
-      <div style="margin-top:12px;font-size:15px;color:${s.text};opacity:.55;letter-spacing:2px;">—— ${d.source}</div>
+      <div style="margin-top:12px;font-size:19px;font-weight:700;color:${s.text};opacity:.9;letter-spacing:3px;">—— ${d.source}</div>
     </div>
   </div>`);
 }
