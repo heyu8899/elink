@@ -79,24 +79,38 @@ function renderExtinct(d) {
   </div>`);
 }
 
-// ---------- GLM 调用 ----------
+// ---------- GLM 调用（带 429 自动重试） ----------
+
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 async function glm(prompt, env) {
-  const res = await fetch(GLM_URL, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": `Bearer ${env.GLM_API_KEY}`,
-    },
-    body: JSON.stringify({
-      model: MODEL,
-      messages: [{ role: "user", content: prompt }],
-      temperature: 0.9,
-    }),
-  });
-  if (!res.ok) throw new Error(`GLM HTTP ${res.status}: ${await res.text()}`);
-  const data = await res.json();
-  return data.choices[0].message.content.trim();
+  let lastErr = "";
+  for (let attempt = 1; attempt <= 4; attempt++) {
+    const res = await fetch(GLM_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${env.GLM_API_KEY}`,
+      },
+      body: JSON.stringify({
+        model: MODEL,
+        messages: [{ role: "user", content: prompt }],
+        temperature: 0.9,
+      }),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      return data.choices[0].message.content.trim();
+    }
+    lastErr = `GLM HTTP ${res.status}: ${await res.text()}`;
+    // 429/5xx 退避重试：3s -> 8s -> 15s
+    if (res.status === 429 || res.status >= 500) {
+      if (attempt < 4) await sleep(attempt === 1 ? 3000 : attempt === 2 ? 8000 : 15000);
+      continue;
+    }
+    throw new Error(lastErr); // 4xx 其他错误不重试
+  }
+  throw new Error(lastErr);
 }
 
 async function genQuote(dateStr, env) {
