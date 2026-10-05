@@ -33,7 +33,7 @@ function renderQuote(d) {
     <div style="font-size:20px;letter-spacing:6px;color:#888;border-bottom:2px solid #C0392B;padding-bottom:12px;margin-bottom:40px;">一 言 · ${d.date}</div>
     <div style="font-size:40px;line-height:1.7;font-weight:bold;">${d.text}</div>
     <div style="margin-top:48px;font-size:24px;color:#C0392B;">—— ${d.from}</div>
-    <div style="position:absolute;bottom:28px;right:36px;font-size:16px;color:#BBB;">${d.date}</div>
+    <div style="position:absolute;bottom:28px;right:36px;font-size:20px;font-weight:bold;color:#444;">${d.date}</div>
   </div>`);
 }
 
@@ -45,9 +45,9 @@ function renderWeather(d) {
       <div style="font-size:56px;font-weight:bold;line-height:1.3;">${d.temp}°C  ${d.condition}</div>
     </div>
     <div style="padding:28px 50px;display:flex;gap:40px;border-bottom:1px solid #EEE;">
-      <div><div style="font-size:16px;color:#999;">湿度</div><div style="font-size:30px;font-weight:bold;">${d.humidity}%</div></div>
-      <div><div style="font-size:16px;color:#999;">风向</div><div style="font-size:30px;font-weight:bold;">${d.wind}</div></div>
-      <div><div style="font-size:16px;color:#999;">温度范围</div><div style="font-size:30px;font-weight:bold;">${d.low}~${d.high}°C</div></div>
+      <div><div style="font-size:20px;font-weight:bold;color:#333;">湿度</div><div style="font-size:30px;font-weight:bold;">${d.humidity}%</div></div>
+      <div><div style="font-size:20px;font-weight:bold;color:#333;">风向</div><div style="font-size:30px;font-weight:bold;">${d.wind}</div></div>
+      <div><div style="font-size:20px;font-weight:bold;color:#333;">温度范围</div><div style="font-size:30px;font-weight:bold;">${d.low}~${d.high}°C</div></div>
     </div>
     <div style="padding:24px 50px;font-size:22px;line-height:1.7;">${d.tip}</div>
   </div>`);
@@ -57,14 +57,14 @@ function renderArchitecture(d) {
   return pageShell("古建筑", `
   <div style="width:800px;height:480px;background:#FFFFFF;display:flex;">
     <div style="width:340px;background:#8B2E2E;color:#FFF;padding:36px 30px;box-sizing:border-box;display:flex;flex-direction:column;">
-      <div style="font-size:18px;letter-spacing:4px;opacity:.8;">每日古建筑</div>
+      <div style="font-size:20px;letter-spacing:4px;font-weight:bold;">每日古建筑</div>
       <div style="font-size:38px;font-weight:bold;margin-top:16px;line-height:1.4;">${d.name}</div>
       <div style="font-size:20px;margin-top:auto;opacity:.85;">${d.location}</div>
-      <div style="font-size:16px;opacity:.6;margin-top:6px;">${d.era}</div>
+      <div style="font-size:20px;font-weight:bold;margin-top:6px;">${d.era}</div>
     </div>
     <div style="flex:1;padding:36px 40px;box-sizing:border-box;">
-      <div style="font-size:19px;line-height:1.9;text-align:justify;">${d.desc}</div>
-      <div style="margin-top:24px;padding-top:16px;border-top:1px dashed #CCC;font-size:16px;color:#8B2E2E;">看点 · ${d.highlight}</div>
+      <div style="font-size:24px;line-height:1.8;font-weight:bold;text-align:justify;">${d.desc}</div>
+      <div style="margin-top:24px;padding-top:16px;border-top:1px dashed #CCC;font-size:20px;font-weight:bold;color:#8B2E2E;">看点 · ${d.highlight}</div>
     </div>
   </div>`);
 }
@@ -72,11 +72,11 @@ function renderArchitecture(d) {
 function renderExtinct(d) {
   return pageShell("灭绝动物", `
   <div style="width:800px;height:480px;background:#1C1C1C;color:#F2F2F2;box-sizing:border-box;padding:40px 50px;display:flex;flex-direction:column;">
-    <div style="font-size:18px;letter-spacing:5px;color:#C0392B;">灭绝档案 · ${d.date}</div>
+    <div style="font-size:20px;letter-spacing:5px;font-weight:bold;color:#C0392B;">灭绝档案 · ${d.date}</div>
     <div style="font-size:42px;font-weight:bold;margin-top:14px;">${d.name}</div>
-    <div style="font-size:18px;color:#999;margin-top:4px;">${d.latin} · 灭绝于 ${d.year}</div>
-    <div style="font-size:19px;line-height:1.85;margin-top:26px;text-align:justify;">${d.desc}</div>
-    <div style="margin-top:auto;font-size:15px;color:#777;">${d.note}</div>
+    <div style="font-size:21px;font-weight:bold;color:#DDD;margin-top:4px;">${d.latin} · 灭绝于 ${d.year}</div>
+    <div style="font-size:24px;line-height:1.75;font-weight:bold;margin-top:26px;text-align:justify;">${d.desc}</div>
+    <div style="margin-top:auto;font-size:19px;font-weight:bold;color:#CCC;">${d.note}</div>
   </div>`);
 }
 
@@ -218,14 +218,14 @@ function renderLandmark(d) {
         : `<div id="imgFallback" style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:120px;color:#D8D2C0;">山</div>`}
     </div>
     <div style="flex:1;padding:34px 38px;box-sizing:border-box;display:flex;flex-direction:column;background:#FFFFFF;">
-      <div style="font-size:16px;letter-spacing:4px;color:#888;">每日地标 · ${d.date}</div>
+      <div style="font-size:20px;letter-spacing:4px;font-weight:bold;color:#555;">每日地标 · ${d.date}</div>
       <div style="font-size:34px;font-weight:bold;margin-top:10px;line-height:1.3;">${d.name}</div>
-      <div style="font-size:17px;color:#666;margin-top:4px;">${d.location}</div>
+      <div style="font-size:21px;font-weight:bold;color:#333;margin-top:4px;">${d.location}</div>
       <div style="margin-top:auto;">
         <div style="font-size:23px;line-height:1.75;font-weight:bold;color:#8B2E2E;">「${d.poem}」</div>
-        <div style="font-size:15px;color:#999;margin-top:6px;">${d.poemSource}</div>
+        <div style="font-size:19px;font-weight:bold;color:#777;margin-top:6px;">${d.poemSource}</div>
       </div>
-      <div style="margin-top:16px;padding-top:12px;border-top:1px dashed #CCC;font-size:15px;line-height:1.6;color:#555;">${d.desc}</div>
+      <div style="margin-top:16px;padding-top:12px;border-top:1px dashed #CCC;font-size:20px;line-height:1.7;font-weight:bold;color:#333;">${d.desc}</div>
     </div>
   </div>`);
 }
