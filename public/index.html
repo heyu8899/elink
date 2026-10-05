@@ -6,17 +6,17 @@
   h1 { font-size: 22px; } .card { border: 1px solid #ddd; border-radius: 8px; padding: 16px 20px; margin: 12px 0; }
   a { color: #2c5f8a; }
   code { background: #f4f4f4; padding: 2px 6px; border-radius: 4px; }
+  .note { color: #666; font-size: 14px; }
 </style></head>
 <body>
-<h1>墨水屏看板 · 部署成功</h1>
-<p>四个页面的固定 URL（绑到 SenseCraft HMI 的 Web Content 用）：</p>
+<h1>墨水屏看板 · 运行中</h1>
+<p>五个页面的固定 URL（绑到 SenseCraft HMI 的 Web Content 用）：</p>
 <div class="card">一言 <a href="/api/page/quote">/api/page/quote</a></div>
 <div class="card">天气 <a href="/api/page/weather">/api/page/weather</a></div>
 <div class="card">古建筑 <a href="/api/page/architecture">/api/page/architecture</a></div>
 <div class="card">灭绝动物 <a href="/api/page/extinct">/api/page/extinct</a></div>
-<div class="card">地标建筑(含AI图) <a href="/api/page/landmark">/api/page/landmark</a></div>
-<p>管理：<a href="/api/status?key=epd2026">生成状态查询</a> · 手动刷新访问 <code>/api/generate?key=epd2026</code></p>
-<p>首次使用：手动访问 <code>/api/generate</code> 触发一次内容生成（配了 CRON_SECRET 的话带上 ?key=xxx）。</p>
-<p>之后每天 07:00 自动更新。</p>
+<div class="card">地标建筑（含 AI 图） <a href="/api/page/landmark">/api/page/landmark</a></div>
+<p class="note">内容每天 07:00 自动更新一次，平时无需手动操作。</p>
+<p class="note">管理接口（<code>/api/status</code>、<code>/api/generate</code>）需要密钥，出于安全考虑不在本页展示。</p>
 </body>
 </html>

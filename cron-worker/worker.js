@@ -19,7 +19,7 @@ export default {
     const url = new URL(request.url);
     if (url.pathname === "/run") {
       const result = await trigger(env);
-      return new Response(result, { headers: { "Content-Type": "application/json" } });
+      return new Response(result, { headers: { "Content-Type": "application/json; charset=utf-8" } });
     }
     return new Response("墨水屏看板定时器运行中。手动触发请访问 /run", {
       headers: { "Content-Type": "text/plain; charset=utf-8" },
@@ -28,9 +28,12 @@ export default {
 };
 
 async function trigger(env) {
-  const target = `${env.SITE_URL}/api/generate?key=${env.CRON_SECRET}`;
+  const target = `${env.SITE_URL}/api/generate`;
   try {
-    const res = await fetch(target);
+    const res = await fetch(target, {
+      // 密钥走请求头，不写进 URL —— URL 会进浏览器历史和各级访问日志
+      headers: { "X-Cron-Secret": env.CRON_SECRET },
+    });
     return await res.text();
   } catch (e) {
     return JSON.stringify({ ok: false, error: String(e) });

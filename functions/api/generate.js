@@ -2,15 +2,22 @@
  * 每日内容生成函数（Cloudflare Pages Functions 版）
  * 触发方式：
  *   1. Cloudflare Worker 定时器（cron-worker/ 目录，每天北京时间 07:00）调用本接口
- *   2. 手动 GET /api/generate?key=你的CRON_SECRET
+ *   2. 手动调用 /api/generate —— 推荐用 X-Cron-Secret 请求头传密钥，
+ *      避免密钥出现在 URL 里（URL 会进浏览器历史和各级访问日志）
  *
- * 流程：GLM 生成文案 -> 渲染 4 个页面 -> 写入 KV
+ * 流程：GLM 生成文案 -> 渲染 5 个页面 -> 写入 KV（图片字节也一并落地）
  * 环境变量：GLM_API_KEY（必填）、CRON_SECRET（可选，手动触发时校验）
  * KV 绑定：Cloudflare 控制台创建 KV 命名空间，绑定变量名 DASHBOARD_KV
  */
 
 const GLM_URL = "https://open.bigmodel.cn/api/paas/v4/chat/completions";
 const MODEL = "glm-5.3-flash"; // 付费模型（0.8/2.8元每百万tokens），带 429 自动重试
+
+// 天气城市配置：换城市只改这里
+const CITY = { name: "北京", lat: 39.9042, lon: 116.4074 };
+
+// 防重入冷却：60 秒内只允许一次全量生成，防止误刷或密钥泄漏后被反复调用烧 token
+const COOLDOWN_MS = 60 * 1000;
 
 // ---------- 页面模板（框架定死，只换内容） ----------
 
@@ -137,10 +144,9 @@ async function genQuote(dateStr, env) {
   return renderQuote({ date: dateStr, ...d });
 }
 
-// 和风天气免费 API（无 Key 版：open-meteo，国内可用）
+// 天气数据用 open-meteo 免费 API（无 Key，国内可用）
 async function genWeather(dateStr, env) {
-  // 北京示例，换成你的城市改 lat/lon
-  const geo = await fetch("https://api.open-meteo.com/v1/forecast?latitude=39.9042&longitude=116.4074&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m&daily=temperature_2m_max,temperature_2m_min,weather_code&timezone=Asia%2FShanghai&forecast_days=1").then(r => r.json());
+  const geo = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${CITY.lat}&longitude=${CITY.lon}&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m&daily=temperature_2m_max,temperature_2m_min,weather_code&timezone=Asia%2FShanghai&forecast_days=1`).then(r => r.json());
   const codeMap = {0:"晴",1:"多云",2:"多云",3:"阴",45:"雾",48:"雾",51:"毛毛雨",61:"小雨",63:"中雨",65:"大雨",71:"小雪",73:"中雪",75:"大雪",80:"阵雨",95:"雷雨"};
   const cur = geo.current, day = geo.daily;
   const cond = codeMap[cur.weather_code] || "多云";
@@ -150,7 +156,7 @@ async function genWeather(dateStr, env) {
   );
   const d = parseLoose(raw);
   return renderWeather({
-    date: dateStr, city: "北京", temp: Math.round(cur.temperature_2m),
+    date: dateStr, city: CITY.name, temp: Math.round(cur.temperature_2m),
     condition: cond, humidity: cur.relative_humidity_2m,
     wind: Math.round(cur.wind_speed_10m) + "km/h",
     low: Math.round(day.temperature_2m_min[0]), high: Math.round(day.temperature_2m_max[0]),
@@ -188,6 +194,15 @@ const E6_STYLE_PROMPT =
 
 const IMAGE_SIZE = "1280x768"; // 5:3 比例生成，展示时缩放为 800x480
 
+/**
+ * 生图并把**图片字节落地到 KV**。
+ *
+ * 为什么必须落地：智谱 CogView 返回的是带签名的临时链接（约 7 天后失效），
+ * 页面若直接引用那个 URL，墨水屏过几天就只剩占位符了。
+ * 所以这里立刻把图片下载下来存进 KV，页面改用 /api/img/landmark 读取。
+ *
+ * @returns {Promise<number>} 图片字节数
+ */
 async function genImage(prompt, env) {
   const res = await fetch("https://open.bigmodel.cn/api/paas/v4/images/generations", {
     method: "POST",
@@ -205,17 +220,35 @@ async function genImage(prompt, env) {
   const data = await res.json();
   const url = data?.data?.[0]?.url;
   if (!url) throw new Error("CogView 未返回图片 URL");
-  return url;
+
+  // 立刻下载字节（临时链接会过期，不能只存 URL）
+  const imgRes = await fetch(url);
+  if (!imgRes.ok) throw new Error(`下载图片失败 HTTP ${imgRes.status}`);
+  const buf = await imgRes.arrayBuffer();
+  if (!buf.byteLength) throw new Error("下载到的图片是空的");
+
+  await env.DASHBOARD_KV.put("img:landmark", buf, {
+    metadata: {
+      contentType: imgRes.headers.get("content-type") || "image/png",
+      size: buf.byteLength,
+      updatedAt: new Date().toISOString(),
+    },
+  });
+
+  return buf.byteLength;
 }
 
 function renderLandmark(d) {
+  // 图片由 /api/img/landmark 提供（读 KV 里的字节）；?v= 版本号保证换图后不吃旧缓存
+  const imgBlock = d.hasImage
+    ? `<img src="/api/img/landmark?v=${d.imageVer}" alt="${d.name}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;"
+         onerror="this.style.display='none';document.getElementById('imgFallback').style.display='flex';">`
+    : "";
   return pageShell("地标", `
   <div style="width:800px;height:480px;background:#FFFFFF;display:flex;overflow:hidden;">
     <div style="width:460px;height:480px;position:relative;background:#F4F1E8;flex-shrink:0;">
-      ${d.imageUrl
-        ? `<img src="${d.imageUrl}" alt="${d.name}" style="width:100%;height:100%;object-fit:cover;display:block;"
-             onerror="this.style.display='none';document.getElementById('imgFallback').style.display='flex';">`
-        : `<div id="imgFallback" style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:120px;color:#D8D2C0;">山</div>`}
+      <div id="imgFallback" style="width:100%;height:100%;display:${d.hasImage ? "none" : "flex"};align-items:center;justify-content:center;font-size:120px;color:#D8D2C0;">山</div>
+      ${imgBlock}
     </div>
     <div style="flex:1;padding:34px 38px;box-sizing:border-box;display:flex;flex-direction:column;background:#FFFFFF;">
       <div style="font-size:20px;letter-spacing:4px;font-weight:bold;color:#555;">每日地标 · ${d.date}</div>
@@ -240,14 +273,18 @@ async function genLandmark(dateStr, env) {
   );
   const d = parseLoose(raw);
 
-  // 第二步：拼上 E6 墨水屏风格约束后生图；失败不阻塞整页（文字页照常出）
-  let imageUrl = "";
+  // 第二步：拼上 E6 墨水屏风格约束后生图并落地 KV；失败不阻塞整页（文字照常出）
+  let hasImage = false;
   try {
-    imageUrl = await genImage(`${d.imagePrompt}. ${E6_STYLE_PROMPT}`, env);
+    await genImage(`${d.imagePrompt}. ${E6_STYLE_PROMPT}`, env);
+    hasImage = true;
   } catch (e) {
     console.error("生图失败，页面使用占位图:", String(e));
   }
-  return renderLandmark({ date: dateStr, imageUrl, ...d });
+
+  // 版本号：让设备每天拿到新图，而不是缓存里的旧图
+  const imageVer = String(Date.now());
+  return renderLandmark({ date: dateStr, hasImage, imageVer, ...d });
 }
 
 // ---------- 入口（Cloudflare Pages Functions：onRequestGet 处理 GET） ----------
@@ -255,42 +292,62 @@ async function genLandmark(dateStr, env) {
 export async function onRequestGet({ request, env }) {
   const url = new URL(request.url);
   const secret = env.CRON_SECRET;
-  if (secret && url.searchParams.get("key") !== secret) {
+
+  // 密钥优先从请求头取（不进 URL / 日志），兼容原来的 ?key= 方式
+  const provided = request.headers.get("X-Cron-Secret") || url.searchParams.get("key");
+  if (secret && provided !== secret) {
     return new Response("forbidden", { status: 403 });
   }
+
+  const kv = env.DASHBOARD_KV;
+  if (!kv) throw new Error("DASHBOARD_KV 未绑定，请在 Pages 项目 Settings -> Bindings 添加 KV namespace");
+
+  // 防重入：冷却期内直接拒绝，避免误刷或密钥泄漏后被反复调用重复烧 token
+  const lastRun = Number((await kv.get("meta:lastRunAt")) || 0);
+  if (lastRun && Date.now() - lastRun < COOLDOWN_MS) {
+    const wait = Math.ceil((COOLDOWN_MS - (Date.now() - lastRun)) / 1000);
+    return new Response(JSON.stringify({
+      ok: false,
+      error: `调用过于频繁，请 ${wait} 秒后再试`,
+      lastRunAt: new Date(lastRun).toISOString(),
+    }, null, 2), { headers: { "Content-Type": "application/json; charset=utf-8" } });
+  }
+  await kv.put("meta:lastRunAt", String(Date.now()));
 
   const dateStr = new Date().toLocaleDateString("zh-CN", {
     timeZone: "Asia/Shanghai", year: "numeric", month: "long", day: "numeric",
   });
 
-  const results = {};
   const tasks = [
     ["quote", genQuote], ["weather", genWeather],
     ["architecture", genArchitecture], ["extinct", genExtinct],
     ["landmark", genLandmark],
   ];
-  for (const [name, fn] of tasks) {
+
+  // 并行生成：串行会把 5 页耗时叠加，landmark 含生图最慢，容易触碰函数时长上限
+  const results = {};
+  await Promise.all(tasks.map(async ([name, fn]) => {
     try {
       results[name] = { ok: true, html: await fn(dateStr, env) };
     } catch (e) {
       results[name] = { ok: false, error: String(e) };
     }
-  }
+  }));
 
-  // 写入 KV（绑定名称固定为 DASHBOARD_KV）
-  const kv = env.DASHBOARD_KV;
-  if (!kv) throw new Error("DASHBOARD_KV 未绑定，请在 Pages 项目 Settings -> Bindings 添加 KV namespace");
+  // 写入 KV（绑定名称固定为 DASHBOARD_KV）；失败的页面保留上一次的内容
   const ts = new Date().toLocaleString("zh-CN", { timeZone: "Asia/Shanghai" });
-  for (const [name, r] of Object.entries(results)) {
-    if (r.ok) {
-      await kv.put(`page:${name}`, r.html);
-      await kv.put(`meta:${name}`, ts);
-    }
-  }
+  await Promise.all(
+    Object.entries(results)
+      .filter(([, r]) => r.ok)
+      .flatMap(([name, r]) => [
+        kv.put(`page:${name}`, r.html),
+        kv.put(`meta:${name}`, ts),
+      ])
+  );
 
   return new Response(JSON.stringify({
     date: dateStr,
     ok: Object.values(results).every(r => r.ok),
     detail: Object.fromEntries(Object.entries(results).map(([k, v]) => [k, v.ok ? "ok" : v.error])),
-  }, null, 2), { headers: { "Content-Type": "application/json" } });
+  }, null, 2), { headers: { "Content-Type": "application/json; charset=utf-8" } });
 }
