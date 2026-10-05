@@ -237,7 +237,8 @@ footer { border-top:1px solid var(--ink14); margin-top:44px; padding-top:14px;
 <script>
 const PAGE_LABELS = {
   quote: "一言", weather: "天气", architecture: "古建筑",
-  extinct: "灭绝动物", landmark: "地标（含AI图）", "img:landmark": "AI 图片资产",
+  extinct: "灭绝动物", landmark: "地标（含AI图）",
+  "img:landmark": "AI 图片资产 · 地标", "img:architecture": "AI 图片资产 · 古建筑",
 };
 
 async function jfetch(url, opts) {
@@ -321,7 +322,7 @@ function setMsg(text, cls) {
 
 async function refreshOne(name, btn) {
   btn.disabled = true;
-  const slow = name === "landmark";
+  const slow = name === "landmark" || name === "architecture";
   btn.textContent = slow ? "排印中(含生图)…" : "排印中…";
   setMsg(
     slow

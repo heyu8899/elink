@@ -30,13 +30,15 @@ export async function onRequestGet({ request, env }) {
   }
 
   // AI 图片资产：存的是图片字节本身（不是会过期的临时链接）
-  const img = await kv.getWithMetadata("img:landmark", "arrayBuffer");
-  status["img:landmark"] = {
-    generated: !!img.value,
-    size: img.value ? img.value.byteLength : 0,
-    contentType: img.metadata?.contentType || "未知",
-    updatedAt: img.metadata?.updatedAt || "未知",
-  };
+  for (const imgKey of ["landmark", "architecture"]) {
+    const img = await kv.getWithMetadata(`img:${imgKey}`, "arrayBuffer");
+    status[`img:${imgKey}`] = {
+      generated: !!img.value,
+      size: img.value ? img.value.byteLength : 0,
+      contentType: img.metadata?.contentType || "未知",
+      updatedAt: img.metadata?.updatedAt || "未知",
+    };
+  }
 
   return jsonResponse({ pages: status });
 }

@@ -319,6 +319,34 @@ function renderWeather(d) {
 
 function renderArchitecture(d) {
   const s = d.style;
+  // 有图：顶图横幅版式（CogView 横图裁横条最自然），名称牌用 accent 压在图上
+  if (d.hasImage) {
+    const imgBlock = `<img src="/api/img/architecture?v=${d.imageVer}" alt="${d.name}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;"
+         onerror="this.style.display='none';document.getElementById('archFallback').style.display='flex';">`;
+    return pageShell("古建筑",
+      `* { margin: 0; padding: 0; box-sizing: border-box; }
+       html, body { width: 800px; height: 480px; overflow: hidden; font-family: ${s.fontFamily}; background: ${s.bg}; color: ${s.text}; }`,
+      `
+  <div style="width:800px;height:480px;background:${s.bg};display:flex;flex-direction:column;">
+    <div style="position:relative;height:262px;flex-shrink:0;background:${s.accent};">
+      <div id="archFallback" style="width:100%;height:100%;display:none;align-items:center;justify-content:center;font-size:64px;font-weight:bold;color:${s.bg};">${d.name}</div>
+      ${imgBlock}
+      <div style="position:absolute;top:0;left:0;background:${s.accent};color:${s.bg};padding:7px 18px;font-size:${s.bodySize}px;letter-spacing:4px;font-weight:bold;">每日古建筑</div>
+      <div style="position:absolute;left:0;bottom:0;background:${s.accent};color:${s.bg};padding:12px 26px 10px;">
+        <div style="font-size:${s.titleSize - 2}px;font-weight:bold;line-height:1.25;">${d.name}</div>
+        <div style="font-size:${s.bodySize}px;margin-top:2px;opacity:.92;">${d.era} · ${d.location}</div>
+      </div>
+    </div>
+    <div style="flex:1;padding:20px 42px 0;display:flex;flex-direction:column;">
+      <div style="font-size:${s.bodySize + 4}px;line-height:1.7;font-weight:bold;text-align:justify;">${d.desc}</div>
+      <div style="margin-top:auto;margin-bottom:18px;padding-top:12px;border-top:1px dashed ${s.text}55;display:flex;justify-content:space-between;align-items:baseline;">
+        <span style="font-size:${s.bodySize}px;font-weight:bold;color:${s.accent};">看点 · ${d.highlight}</span>
+        <span style="font-size:${s.bodySize - 1}px;color:${s.text};opacity:.5;">${d.date}</span>
+      </div>
+    </div>
+  </div>`);
+  }
+  // 无图降级：原左右分栏版式（竖排仍可用）
   const vertical = s.writingMode === "vertical";
   const descStyle = vertical
     ? `writing-mode:vertical-rl;font-size:${s.bodySize + 4}px;line-height:2;font-weight:bold;height:360px;text-align:start;`
@@ -436,8 +464,18 @@ export async function genWeather(dateStr, env) {
 
 export async function genArchitecture(dateStr, env) {
   const { data, style } = await genDeduped(env.DASHBOARD_KV, "architecture", env,
-    `请随机选一座中国著名古建筑（避开最常见的故宫/长城），返回严格 JSON：{"name":"名称","location":"所在地","era":"年代","desc":"约90字的介绍","highlight":"一个看点，不超过20字"}。`);
-  return renderArchitecture({ date: dateStr, style, ...data });
+    `请随机选一座中国著名古建筑（避开最常见的故宫/长城），返回严格 JSON：{"name":"名称","location":"所在地","era":"年代","desc":"约90字的介绍","highlight":"一个看点，不超过20字","imagePrompt":"英文提示词，描述该古建筑的标志性外观与周围环境，简洁的扁平插画风格场景构图，30个英文单词以内"}`);
+
+  // 与地标页共用生图管线：图片字节落 KV img:architecture
+  let hasImage = false;
+  try {
+    await genImage(`${data.imagePrompt}. ${E6_STYLE_PROMPT}`, env, "architecture");
+    hasImage = true;
+  } catch (e) {
+    console.error("古建筑生图失败，页面使用占位版式:", String(e));
+  }
+  const imageVer = String(Date.now());
+  return renderArchitecture({ date: dateStr, style, hasImage, imageVer, ...data });
 }
 
 export async function genExtinct(dateStr, env) {
@@ -463,11 +501,11 @@ const IMAGE_SIZE = "1280x768"; // 5:3 比例生成，展示时缩放为 800x480
  *
  * 为什么必须落地：智谱 CogView 返回的是带签名的临时链接（几天后失效），
  * 页面若直接引用那个 URL，墨水屏过几天就只剩占位符了。
- * 所以这里立刻把图片下载下来存进 KV，页面改用 /api/img/landmark 读取。
+ * 所以这里立刻把图片下载下来存进 KV，页面改用 /api/img/{key} 读取。
  *
  * @returns {Promise<number>} 图片字节数
  */
-export async function genImage(prompt, env) {
+export async function genImage(prompt, env, key = "landmark") {
   const res = await fetch("https://open.bigmodel.cn/api/paas/v4/images/generations", {
     method: "POST",
     headers: {
@@ -494,7 +532,7 @@ export async function genImage(prompt, env) {
   const buf = await imgRes.arrayBuffer();
   if (!buf.byteLength) throw new Error("下载到的图片是空的");
 
-  await env.DASHBOARD_KV.put("img:landmark", buf, {
+  await env.DASHBOARD_KV.put(`img:${key}`, buf, {
     metadata: {
       contentType: imgRes.headers.get("content-type") || "image/png",
       size: buf.byteLength,
@@ -543,7 +581,7 @@ export async function genLandmark(dateStr, env) {
   // 拼上 E6 墨水屏风格约束后生图并落地 KV；失败不阻塞整页（文字照常出）
   let hasImage = false;
   try {
-    await genImage(`${d.imagePrompt}. ${E6_STYLE_PROMPT}`, env);
+    await genImage(`${d.imagePrompt}. ${E6_STYLE_PROMPT}`, env, "landmark");
     hasImage = true;
   } catch (e) {
     console.error("生图失败，页面使用占位图:", String(e));
