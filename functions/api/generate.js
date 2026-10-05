@@ -22,6 +22,7 @@ const BASE_STYLE = `
 
 function pageShell(title, bodyHtml) {
   return `<!DOCTYPE html><html><head><meta charset="utf-8">
+<meta name="viewport" content="width=800, initial-scale=1, user-scalable=no">
 <title>${title}</title><style>${BASE_STYLE}</style></head>
 <body>${bodyHtml}</body></html>`;
 }
