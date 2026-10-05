@@ -15,7 +15,7 @@ import {
   jsonResponse,
 } from "../_lib.js";
 
-const COOLDOWN_MS = 60 * 1000;
+const COOLDOWN_MS = 15 * 1000;
 
 export async function onRequestGet({ params, request, env }) {
   if (!(await requireAdmin(request, env))) {
@@ -34,13 +34,14 @@ export async function onRequestGet({ params, request, env }) {
     );
   }
 
-  // 与全量生成共用冷却，防止并发重复烧 token
-  const lastRun = Number((await kv.get("meta:lastRunAt")) || 0);
+  // 单页刷新用独立且更短的防抖（15 秒），不与全量生成的 60 秒冷却互相干扰，
+  // 方便在管理后台连续刷新不同页面（单页只烧 1 次 GLM 调用）
+  const lastRun = Number((await kv.get("meta:lastPageAt")) || 0);
   if (Date.now() - lastRun < COOLDOWN_MS) {
     const wait = Math.ceil((COOLDOWN_MS - (Date.now() - lastRun)) / 1000);
-    return jsonResponse({ ok: false, error: `调用过于频繁，请 ${wait} 秒后再试` });
+    return jsonResponse({ ok: false, error: `操作太快，请 ${wait} 秒后再试` });
   }
-  await kv.put("meta:lastRunAt", String(Date.now()));
+  await kv.put("meta:lastPageAt", String(Date.now()));
 
   try {
     const html = await fn(getDateStr(), env);
