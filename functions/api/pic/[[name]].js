@@ -40,12 +40,21 @@ async function readIndex(kv) {
   } catch { return []; }
 }
 
-// 公开读取
-export async function onRequestGet({ params, env }) {
+// GET：/api/pic/{name} 读图（公开）；/api/pic 返回索引列表（需鉴权）
+export async function onRequestGet({ params, request, env }) {
   const kv = env.DASHBOARD_KV;
   if (!kv) return new Response("DASHBOARD_KV 未绑定", { status: 500 });
-  const name = safeName(params.name);
-  if (!name) return new Response("bad name", { status: 400 });
+  const name = params.name ? safeName(params.name) : null;
+
+  if (!name) {
+    if (!(await requireAdmin(request, env))) {
+      return new Response("forbidden", { status: 403 });
+    }
+    const raw = await kv.get("pic:index");
+    let items = [];
+    try { items = raw ? JSON.parse(raw) : []; } catch { /* 索引损坏视为空 */ }
+    return jsonResponse({ ok: true, items: Array.isArray(items) ? items : [] });
+  }
 
   const { value, metadata } = await kv.getWithMetadata(`pic:${name}`, "arrayBuffer");
   if (!value) return new Response("not found", { status: 404 });
