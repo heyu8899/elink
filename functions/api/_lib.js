@@ -319,31 +319,36 @@ function renderWeather(d) {
 
 function renderArchitecture(d) {
   const s = d.style;
-  // 有图：顶图横幅版式 + 双栏报纸排版（首字下沉），中缝虚线呼应排印主题
+  // 有图：图区零遮挡（名称沉底）→ 点睛文案 → 大字精简介绍（首字下沉）→ 名称条
   if (d.hasImage) {
-    const imgBlock = `<img src="/api/img/architecture?v=${d.imageVer}" alt="${d.name}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center 30%;display:block;"
+    const imgBlock = `<img src="/api/img/architecture?v=${d.imageVer}" alt="${d.name}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center 35%;display:block;"
          onerror="this.style.display='none';document.getElementById('archFallback').style.display='flex';">`;
     return pageShell("古建筑",
       `* { margin: 0; padding: 0; box-sizing: border-box; }
        html, body { width: 800px; height: 480px; overflow: hidden; font-family: ${s.fontFamily}; background: ${s.bg}; color: ${s.text}; }
-       .arch-desc { column-count:2; column-gap:34px; column-rule:1px dashed ${s.text}40; }
-       .arch-desc::first-letter { float:left; font-size:2.1em; line-height:1; padding:3px 10px 0 0; color:${s.accent}; font-weight:700; }`,
+       .arch-desc::first-letter { float:left; font-size:1.9em; line-height:1; padding:4px 10px 0 0; color:${s.accent}; font-weight:700; }`,
       `
   <div style="width:800px;height:480px;background:${s.bg};display:flex;flex-direction:column;">
-    <div style="position:relative;height:272px;flex-shrink:0;background:${s.accent};">
-      <div id="archFallback" style="width:100%;height:100%;display:none;align-items:center;justify-content:center;font-size:64px;font-weight:bold;color:${s.bg};">${d.name}</div>
+    <div style="position:relative;height:280px;flex-shrink:0;background:${s.accent};">
+      <div id="archFallback" style="width:100%;height:100%;display:none;align-items:center;justify-content:center;font-size:60px;font-weight:bold;color:${s.bg};">${d.name}</div>
       ${imgBlock}
-      <div style="position:absolute;top:0;left:0;background:${s.accent};color:${s.bg};padding:7px 18px;font-size:${s.bodySize}px;letter-spacing:4px;font-weight:bold;">每日古建筑</div>
-      <div style="position:absolute;left:0;bottom:0;background:${s.accent};color:${s.bg};padding:12px 26px 10px;">
-        <div style="font-size:${s.titleSize - 2}px;font-weight:bold;line-height:1.25;">${d.name}</div>
-        <div style="font-size:${s.bodySize}px;margin-top:2px;opacity:.92;">${d.era} · ${d.location}</div>
-      </div>
     </div>
-    <div style="flex:1;padding:24px 44px 0;display:flex;flex-direction:column;">
-      <div class="arch-desc" style="font-size:${s.bodySize + 3}px;line-height:1.8;font-weight:bold;text-align:justify;">${d.desc}</div>
-      <div style="margin-top:auto;margin-bottom:18px;padding-top:12px;border-top:1px dashed ${s.text}55;display:flex;justify-content:space-between;align-items:baseline;">
-        <span style="font-size:${s.bodySize}px;font-weight:bold;color:${s.accent};">看点 · ${d.highlight}</span>
-        <span style="font-family:var(--mono);font-size:${s.bodySize - 2}px;color:${s.text};opacity:.5;">${d.date}</span>
+    <div style="flex:1;display:flex;align-items:center;justify-content:center;gap:16px;padding:0 30px;">
+      <span style="flex:1;height:1px;background:${s.accent};"></span>
+      <span style="font-size:23px;font-weight:bold;color:${s.accent};letter-spacing:2px;">${d.epigraph || ""}</span>
+      <span style="flex:1;height:1px;background:${s.accent};"></span>
+    </div>
+    <div style="padding:8px 44px 0;">
+      <div class="arch-desc" style="font-size:23px;line-height:1.75;font-weight:bold;text-align:justify;">${d.desc}</div>
+    </div>
+    <div style="height:64px;flex-shrink:0;background:${s.accent};color:${s.bg};display:flex;justify-content:space-between;align-items:center;padding:0 30px;">
+      <div style="display:flex;align-items:baseline;gap:14px;">
+        <span style="font-size:11px;letter-spacing:3px;opacity:.85;">每日古建筑</span>
+        <span style="font-size:25px;font-weight:bold;">${d.name}</span>
+      </div>
+      <div style="display:flex;align-items:baseline;gap:16px;">
+        <span style="font-size:15px;opacity:.92;">${d.era} · ${d.location}</span>
+        <span style="font-size:16px;font-weight:bold;">看点 · ${d.highlight}</span>
       </div>
     </div>
   </div>`);
@@ -481,10 +486,11 @@ async function translateImagePrompt(env, topicText, extraPrompt) {
 }
 
 const ONE_STEP_ARCH_PROMPT =
-  `请随机选一座中国著名古建筑（避开最常见的故宫/长城），返回严格 JSON：{"name":"名称","location":"所在地","era":"年代","desc":"约90字的介绍","highlight":"一个看点，不超过20字","imagePrompt":"英文提示词，描述该古建筑的标志性外观与周围环境，简洁的扁平插画风格场景构图，30个英文单词以内"}`;
+  `请随机选一座中国著名古建筑（避开最常见的故宫/长城），返回严格 JSON：{"name":"名称","location":"所在地","era":"年代","desc":"约50字的介绍，凝练有画面感","highlight":"一个看点，不超过20字","epigraph":"一句点睛的话，不超过16字，凝练意境或历史感慨","imagePrompt":"英文提示词，描述该古建筑的标志性外观与周围环境，简洁的扁平插画风格场景构图，30个英文单词以内"}`;
 
 const TWO_STEP_ARCH_PROMPT =
-  `请随机选一座中国著名古建筑（避开最常见的故宫/长城），返回严格 JSON：{"name":"名称","location":"所在地","era":"年代","desc":"约90字的介绍","highlight":"一个看点，不超过20字"}。`;
+  `请随机选一座中国著名古建筑（避开最常见的故宫/长城），返回严格 JSON：` +
+  `{"name":"名称","location":"所在地","era":"年代","desc":"约50字的介绍，凝练有画面感","highlight":"一个看点，不超过20字","epigraph":"一句点睛的话，不超过16字，凝练意境或历史感慨"}。`;
 
 export async function genArchitecture(dateStr, env) {
   const { data, style, extraPrompt } = await genDeduped(env.DASHBOARD_KV, "architecture", env,
