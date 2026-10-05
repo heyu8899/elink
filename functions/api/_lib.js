@@ -330,19 +330,20 @@ function renderArchitecture(d) {
     return pageShell("古建筑",
       `${fontFace}
        * { margin: 0; padding: 0; box-sizing: border-box; }
-       html, body { width: 800px; height: 480px; overflow: hidden; font-family: ${archFont}; background: ${s.bg}; color: ${s.text}; }`,
+       html, body { width: 800px; height: 480px; overflow: hidden; font-family: ${archFont}; background: ${s.bg}; color: ${s.text}; }
+       .arch-v > div { -webkit-text-stroke: 0.55px currentColor; }`,
       `
   <div style="width:800px;height:480px;background:${s.bg};display:flex;">
     <div style="position:relative;width:440px;flex-shrink:0;background:${s.accent};">
       <div id="archFallback" style="width:100%;height:100%;display:none;align-items:center;justify-content:center;font-size:52px;font-weight:bold;color:${s.bg};writing-mode:vertical-rl;letter-spacing:10px;">${d.name}</div>
       ${imgBlock}
     </div>
-    <div style="flex:1;writing-mode:vertical-rl;padding:32px 22px;background:${s.bg};overflow:hidden;">
+    <div class="arch-v" style="flex:1;writing-mode:vertical-rl;padding:32px 22px;background:${s.bg};overflow:hidden;">
       <div style="display:inline-block;vertical-align:top;font-size:27px;font-weight:bold;letter-spacing:6px;line-height:2;max-height:400px;overflow:hidden;">「${d.quote}」</div>
-      <div style="display:inline-block;vertical-align:top;font-size:17px;opacity:.72;letter-spacing:5px;max-height:400px;overflow:hidden;padding-top:8px;">${d.source}</div>
+      <div style="display:inline-block;vertical-align:top;font-size:17px;font-weight:700;opacity:.85;letter-spacing:5px;max-height:400px;overflow:hidden;padding-top:8px;">${d.source}</div>
       <div style="display:inline-block;vertical-align:top;width:1px;height:370px;background:${s.accent};margin:0 18px;"></div>
       <div style="display:inline-block;vertical-align:top;font-size:33px;font-weight:bold;letter-spacing:9px;max-height:400px;overflow:hidden;">${d.name}</div>
-      <div style="display:inline-block;vertical-align:top;font-size:15px;opacity:.68;letter-spacing:4px;max-height:400px;overflow:hidden;padding-top:8px;">${d.era} · ${d.location}</div>
+      <div style="display:inline-block;vertical-align:top;font-size:15px;font-weight:700;opacity:.85;letter-spacing:4px;max-height:400px;overflow:hidden;padding-top:8px;">${d.era} · ${d.location}</div>
     </div>
   </div>`);
   }
