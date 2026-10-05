@@ -86,6 +86,25 @@
     墨水屏设备多久拉取一次由设备端 HMI 的 Interval 设置决定（建议两边对齐）。
     手动"全量刷新"不受此频率限制。定时 Worker 需设置为每小时触发一次（见 README）。</p>
   </div>
+
+  <h2>页面配置（提示词 + 风格）</h2>
+  <div class="card">
+    <div class="row">
+      <select id="cfgPageSel" onchange="loadPageConfig()"></select>
+      <button onclick="resetPageConfig()">恢复默认</button>
+      <span id="pcfgMsg"></span>
+    </div>
+    <p class="muted" style="margin-top:10px">提示词 = 内容附加要求（拼在系统格式要求之后，随便写中文不会破坏生成），留空用默认：</p>
+    <textarea id="promptTa" rows="3" style="width:100%;box-sizing:border-box;font-size:13px;padding:8px;border:1px solid #ccc;border-radius:6px;"
+      placeholder="例：偏向冷门的唐宋诗句，避免励志鸡汤，意境偏孤寂"></textarea>
+    <p class="muted" style="margin-top:10px">风格 JSON（可留空）。字段：colors{bg,text,accent} / font{titleSize 16-120, bodySize 12-60, family:serif|sans} / layout{writingMode:horizontal|vertical 仅一言古建筑生效, align:left|center 仅一言生效}。颜色用 #RRGGBB，推荐墨水屏高对比色：</p>
+    <textarea id="styleTa" rows="6" style="width:100%;box-sizing:border-box;font-size:13px;padding:8px;border:1px solid #ccc;border-radius:6px;font-family:monospace;"
+      placeholder='{"colors":{"accent":"#C0392B"},"font":{"titleSize":44},"layout":{"writingMode":"vertical"}}'></textarea>
+    <div class="row" style="margin-top:10px">
+      <button class="primary" onclick="savePageConfig()">保存配置</button>
+      <span class="muted">保存后点上方对应页面的"刷新此页"即可看到效果。</span>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -249,7 +268,74 @@ async function saveConfig() {
   el.className = ok ? "ok" : "err";
 }
 
+// ---------- 页面配置（提示词 + 风格） ----------
+
+function initPageCfg() {
+  const sel = document.getElementById("cfgPageSel");
+  for (const [name, label] of Object.entries(PAGE_LABELS)) {
+    if (name === "img:landmark") continue;
+    const o = document.createElement("option");
+    o.value = name; o.textContent = `${label}（${name}）`;
+    sel.appendChild(o);
+  }
+}
+
+function setPcfgMsg(text, cls) {
+  const el = document.getElementById("pcfgMsg");
+  el.textContent = text;
+  el.className = cls || "muted";
+}
+
+async function loadPageConfig() {
+  const page = document.getElementById("cfgPageSel").value;
+  setPcfgMsg("加载中…");
+  const { ok, status, data } = await jfetch("/api/pageconfig/" + page);
+  if (status === 403) return showLogin();
+  document.getElementById("promptTa").value = ok ? data.prompt : "";
+  document.getElementById("styleTa").value = ok ? data.style : "";
+  setPcfgMsg(ok ? "" : (data.error || "加载失败"), "err");
+}
+
+async function savePageConfig() {
+  const page = document.getElementById("cfgPageSel").value;
+  const styleText = document.getElementById("styleTa").value.trim();
+  if (styleText) {
+    try { JSON.parse(styleText); }
+    catch (e) { return setPcfgMsg("风格 JSON 格式有误：" + e.message, "err"); }
+  }
+  setPcfgMsg("保存中…");
+  const { ok, status, data } = await jfetch("/api/pageconfig/" + page, {
+    method: "PUT", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      prompt: document.getElementById("promptTa").value,
+      style: styleText,
+    }),
+  });
+  if (status === 403) return showLogin();
+  if (ok) {
+    // 回显规范化后的配置（实际生效的就是这份）
+    document.getElementById("styleTa").value = data.style || "";
+    setPcfgMsg("已保存。点上方该页的「刷新此页」查看效果", "ok");
+  } else {
+    setPcfgMsg(data.error || "保存失败", "err");
+  }
+}
+
+async function resetPageConfig() {
+  const page = document.getElementById("cfgPageSel").value;
+  const { ok, status, data } = await jfetch("/api/pageconfig/" + page, { method: "DELETE" });
+  if (status === 403) return showLogin();
+  if (ok) {
+    document.getElementById("promptTa").value = "";
+    document.getElementById("styleTa").value = "";
+    setPcfgMsg("已恢复系统默认", "ok");
+  } else {
+    setPcfgMsg(data.error || "操作失败", "err");
+  }
+}
+
 initConfigUI();
+initPageCfg();
 checkAuth();
 </script>
 </body>
