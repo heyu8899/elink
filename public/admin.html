@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>墨水屏看板 · 管理后台</title>
+<style>
+  body { font-family: sans-serif; max-width: 780px; margin: 40px auto; color: #222; padding: 0 16px; }
+  h1 { font-size: 22px; }
+  h2 { font-size: 17px; margin-top: 28px; }
+  .card { border: 1px solid #ddd; border-radius: 8px; padding: 16px 20px; margin: 12px 0; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid #eee; }
+  th { color: #666; font-weight: normal; }
+  button { cursor: pointer; border: 1px solid #2c5f8a; background: #fff; color: #2c5f8a;
+           border-radius: 6px; padding: 6px 14px; font-size: 13px; }
+  button.primary { background: #2c5f8a; color: #fff; }
+  button:disabled { opacity: .5; cursor: wait; }
+  input[type=password], select { padding: 8px; border: 1px solid #ccc; border-radius: 6px; font-size: 14px; }
+  .muted { color: #888; font-size: 13px; }
+  .ok { color: #1a7f4b; } .err { color: #b03030; }
+  .hidden { display: none; }
+  .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .spread { justify-content: space-between; }
+  #msg { font-size: 13px; min-height: 18px; }
+  a { color: #2c5f8a; }
+</style>
+</head>
+<body>
+
+<!-- 登录视图 -->
+<div id="loginView" class="hidden">
+  <h1>墨水屏看板 · 登录</h1>
+  <div class="card">
+    <div class="row">
+      <input type="password" id="pw" placeholder="管理密码" style="width:220px"
+             onkeydown="if(event.key==='Enter')login()">
+      <button class="primary" id="loginBtn" onclick="login()">登录</button>
+    </div>
+    <p id="loginMsg" class="muted"></p>
+    <p class="muted">密码由服务端环境变量 ADMIN_PASSWORD 配置；未配置时使用 CRON_SECRET。</p>
+  </div>
+</div>
+
+<!-- 管理面板 -->
+<div id="panelView" class="hidden">
+  <div class="row spread">
+    <h1>墨水屏看板 · 管理后台</h1>
+    <button onclick="logout()">登出</button>
+  </div>
+
+  <h2>页面状态</h2>
+  <div class="card">
+    <table id="statusTable">
+      <thead><tr><th>页面</th><th>状态</th><th>更新时间</th><th>大小</th><th>预览</th><th>操作</th></tr></thead>
+      <tbody></tbody>
+    </table>
+    <p class="muted">"AI 图片资产"是 landmark 页配图的本体（存 KV，不会过期）。
+    单页刷新只重新生成该页；landmark 含生图较慢，约 30-60 秒。</p>
+  </div>
+
+  <div class="card">
+    <div class="row">
+      <button class="primary" id="allBtn" onclick="refreshAll()">全量刷新（重新生成全部 5 页）</button>
+      <span id="msg"></span>
+    </div>
+  </div>
+
+  <h2>更新频率</h2>
+  <div class="card">
+    <div class="row">
+      <select id="modeSel" onchange="modeChanged()">
+        <option value="daily">每天定时生成</option>
+        <option value="interval">每隔 N 小时生成</option>
+      </select>
+      <span id="dailyOpts" class="row">每天
+        <select id="hourSel"></select> 点（北京时间）
+      </span>
+      <span id="intervalOpts" class="row hidden">每隔
+        <select id="everySel"></select> 小时
+      </span>
+      <button onclick="saveConfig()">保存</button>
+      <span id="cfgMsg"></span>
+    </div>
+    <p class="muted">保存后即时生效，无需重新部署。这里控制的是<b>服务端内容生成频率</b>；
+    墨水屏设备多久拉取一次由设备端 HMI 的 Interval 设置决定（建议两边对齐）。
+    手动"全量刷新"不受此频率限制。定时 Worker 需设置为每小时触发一次（见 README）。</p>
+  </div>
+</div>
+
+<script>
+const PAGE_LABELS = {
+  quote: "一言", weather: "天气", architecture: "古建筑",
+  extinct: "灭绝动物", landmark: "地标（含AI图）", "img:landmark": "AI 图片资产",
+};
+
+async function jfetch(url, opts) {
+  const r = await fetch(url, opts);
+  let data = {};
+  try { data = await r.json(); } catch (e) { /* 非 JSON 响应 */ }
+  return { ok: r.ok, status: r.status, data };
+}
+
+async function checkAuth() {
+  const { data } = await jfetch("/api/auth");
+  (data.authenticated ? showPanel : showLogin)();
+}
+
+function showLogin() {
+  document.getElementById("loginView").classList.remove("hidden");
+  document.getElementById("panelView").classList.add("hidden");
+}
+
+async function showPanel() {
+  document.getElementById("loginView").classList.add("hidden");
+  document.getElementById("panelView").classList.remove("hidden");
+  await Promise.all([loadStatus(), loadConfig()]);
+}
+
+async function login() {
+  const btn = document.getElementById("loginBtn");
+  const msg = document.getElementById("loginMsg");
+  btn.disabled = true; msg.textContent = "登录中..."; msg.className = "muted";
+  const { ok, data } = await jfetch("/api/auth", {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ password: document.getElementById("pw").value }),
+  });
+  btn.disabled = false;
+  if (ok) { showPanel(); }
+  else { msg.textContent = data.error || "登录失败"; msg.className = "err"; }
+}
+
+async function logout() {
+  await fetch("/api/auth", { method: "DELETE" });
+  showLogin();
+}
+
+function fmtSize(n) {
+  if (!n) return "0 B";
+  if (n < 1024) return n + " B";
+  if (n < 1048576) return (n / 1024).toFixed(1) + " KB";
+  return (n / 1048576).toFixed(2) + " MB";
+}
+
+async function loadStatus() {
+  const { status, data } = await jfetch("/api/status");
+  if (status === 403) return showLogin();
+  const tbody = document.querySelector("#statusTable tbody");
+  tbody.innerHTML = "";
+  for (const [name, s] of Object.entries(data.pages || {})) {
+    const isImg = name.startsWith("img:");
+    const preview = isImg
+      ? `<a href="/api/img/${name.slice(4)}" target="_blank">查看图片</a>`
+      : `<a href="/api/page/${name}" target="_blank">打开页面</a>`;
+    const action = isImg ? "—" : `<button onclick="refreshOne('${name}', this)">刷新此页</button>`;
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${PAGE_LABELS[name] || name}</td>
+      <td class="${s.generated ? "ok" : "err"}">${s.generated ? "已生成" : "未生成"}</td>
+      <td>${s.updatedAt || "-"}</td>
+      <td>${fmtSize(s.size)}</td>
+      <td>${preview}</td>
+      <td>${action}</td>`;
+    tbody.appendChild(tr);
+  }
+}
+
+function setMsg(text, cls) {
+  const el = document.getElementById("msg");
+  el.textContent = text;
+  el.className = cls || "";
+}
+
+async function refreshOne(name, btn) {
+  btn.disabled = true; btn.textContent = "生成中…";
+  setMsg(`正在重新生成「${PAGE_LABELS[name] || name}」…`);
+  const { ok, status, data } = await jfetch("/api/refresh/" + name);
+  btn.disabled = false; btn.textContent = "刷新此页";
+  if (status === 403) return showLogin();
+  setMsg(
+    ok ? `「${PAGE_LABELS[name]}」已更新：${data.updatedAt || ""}` : `失败：${data.error || status}`,
+    ok ? "ok" : "err"
+  );
+  loadStatus();
+}
+
+async function refreshAll() {
+  const btn = document.getElementById("allBtn");
+  btn.disabled = true; btn.textContent = "生成中（约 30-60 秒）…";
+  setMsg("正在全量重新生成 5 个页面…");
+  const { ok, status, data } = await jfetch("/api/generate?force=1");
+  btn.disabled = false; btn.textContent = "全量刷新（重新生成全部 5 页）";
+  if (status === 403) return showLogin();
+  setMsg(
+    ok ? "全部页面已更新" : `部分失败：${JSON.stringify(data.detail || data.error)}`,
+    ok ? "ok" : "err"
+  );
+  loadStatus();
+}
+
+// ---------- 更新频率配置 ----------
+
+function initConfigUI() {
+  const hourSel = document.getElementById("hourSel");
+  for (let h = 0; h < 24; h++) {
+    const o = document.createElement("option");
+    o.value = h; o.textContent = h;
+    hourSel.appendChild(o);
+  }
+  const everySel = document.getElementById("everySel");
+  for (const h of [1, 2, 3, 4, 6, 8, 12, 24]) {
+    const o = document.createElement("option");
+    o.value = h; o.textContent = h;
+    everySel.appendChild(o);
+  }
+}
+
+function modeChanged() {
+  const mode = document.getElementById("modeSel").value;
+  document.getElementById("dailyOpts").classList.toggle("hidden", mode !== "daily");
+  document.getElementById("intervalOpts").classList.toggle("hidden", mode !== "interval");
+}
+
+async function loadConfig() {
+  const { status, data } = await jfetch("/api/config");
+  if (status === 403) return showLogin();
+  const s = data.schedule || { mode: "daily", hours: [7] };
+  document.getElementById("modeSel").value = s.mode;
+  if (s.mode === "interval") {
+    document.getElementById("everySel").value = String(s.everyHours || 24);
+  } else {
+    document.getElementById("hourSel").value = String((s.hours || [7])[0]);
+  }
+  modeChanged();
+}
+
+async function saveConfig() {
+  const mode = document.getElementById("modeSel").value;
+  const body = mode === "daily"
+    ? { mode, hours: [Number(document.getElementById("hourSel").value)] }
+    : { mode, everyHours: Number(document.getElementById("everySel").value) };
+  const { ok, status, data } = await jfetch("/api/config", {
+    method: "PUT", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  const el = document.getElementById("cfgMsg");
+  if (status === 403) return showLogin();
+  el.textContent = ok ? "已保存，即刻生效" : (data.error || "保存失败");
+  el.className = ok ? "ok" : "err";
+}
+
+initConfigUI();
+checkAuth();
+</script>
+</body>
+</html>

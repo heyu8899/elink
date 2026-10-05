@@ -39,10 +39,11 @@ elink-repo/
 1. **Bindings** → 添加 **KV namespace**：Variable name 填 **`DASHBOARD_KV`**，选 `dashboard-kv`
 2. **Variables and Secrets** → 添加：
    - `GLM_API_KEY` = 智谱 API Key
-   - `CRON_SECRET` = 自定义一串字符
+   - `CRON_SECRET` = 自定义一串字符（机器调用密钥，Worker 定时触发用）
+   - `ADMIN_PASSWORD` = 管理后台登录密码（可选；不配则用 `CRON_SECRET` 登录）
 3. **每次改绑定/变量后必须重新部署**（Deployments → Retry deployment，或推个空提交）
 
-> 注意：`CRON_SECRET` 不要写进 `public/` 下的任何文件 —— 静态页面对所有人可见。
+> 注意：`CRON_SECRET` / `ADMIN_PASSWORD` 不要写进 `public/` 下的任何文件 —— 静态页面对所有人可见。
 
 ### 5. 部署定时触发 Worker
 CF 控制台 → **Workers & Pages → Create → Worker** → 命名 `epd-dashboard-cron` → Deploy：
@@ -50,7 +51,7 @@ CF 控制台 → **Workers & Pages → Create → Worker** → 命名 `epd-dashb
 2. Worker → **Settings → Variables**：
    - `SITE_URL` = https://xxx.pages.dev
    - `CRON_SECRET` = 与 Pages 里一致
-3. Worker → **Settings → Trigger Events → Cron Triggers** → 添加 `0 23 * * *`（UTC 23:00 = 北京 07:00）
+3. Worker → **Settings → Trigger Events → Cron Triggers** → 添加 `0 * * * *`（**每小时**触发；是否真正生成由管理页设置的更新频率决定，改频率无需动 Worker）
 
 或本地 wrangler 部署：`cd cron-worker && npx wrangler deploy`
 
@@ -86,6 +87,29 @@ curl -H "X-Cron-Secret: 你的密钥" https://xxx.pages.dev/api/status
 /api/page/landmark        （含 AI 生成图）
 ```
 加入 Pagelist 轮播，设备 Interval = 1440（分钟）= 每天刷新一次。
+
+## 管理后台
+
+浏览器打开 `https://xxx.pages.dev/admin.html`：
+
+| 功能 | 说明 |
+|---|---|
+| 登录 | 密码为 `ADMIN_PASSWORD`（未配置则用 `CRON_SECRET`），会话 cookie 7 天有效，HttpOnly + 签名防伪造 |
+| 页面状态 | 5 个页面 + AI 图片的生成状态、更新时间、大小，支持**单页刷新**（`/api/refresh/{page}`） |
+| 全量刷新 | 立即重新生成全部页面（不受频率限制，60 秒冷却防重入） |
+| 更新频率 | 每天定时（选小时）或每隔 N 小时；**保存即时生效**，无需重新部署 |
+
+频率设置的原理：Worker 每小时触发一次 `/api/generate`（带 `X-Cron-Secret` 头），服务端对照 KV 里的配置（`config:schedule`）判断是否到点，没到点直接跳过。因此改频率只写 KV，不用动 Worker。
+
+> 注意：这里控制的是**服务端生成频率**；墨水屏设备多久拉取一次由 HMI 的 Interval 决定，建议两边对齐。
+
+KV 中由此新增的键：
+
+| 键 | 内容 |
+|---|---|
+| `config:schedule` | 更新频率配置（`{"mode":"daily","hours":[7]}` 或 `{"mode":"interval","everyHours":12}`） |
+| `meta:lastRunAt` | 上次触发生成的时间（60 秒防重入冷却） |
+| `meta:lastSuccessAt` | 上次全部成功的时间（interval 模式的调度基准） |
 
 ## KV 里存了什么
 
