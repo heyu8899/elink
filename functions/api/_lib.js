@@ -524,13 +524,14 @@ const E6_STYLE_PROMPT =
 
 const IMAGE_SIZE = "1280x768"; // 5:3 比例生成，展示时缩放为 800x480
 
-// 古建筑页专属风格：界画测绘图风（用户参考图）——精细木构立面线描 + 赭石淡彩 +
-// 仿古纸底，只要建筑本体，画面无任何注记文字与印章，竖构图（忽略 E6 六色约束）
+// 古建筑页专属风格：界画测绘图风——精细木构立面线描 + 赭石淡彩 + 仿古纸底，
+// 只要建筑本体充满画面，严禁任何题字/印章/边框，竖构图（忽略 E6 六色约束）
 const ARCH_STYLE_PROMPT =
-  "traditional Chinese jiehua architectural painting, precise elevation drawing of an ancient wooden tower pavilion, " +
-  "fine ink linework with ochre and umber wash on warm beige antique paper, " +
+  "absolutely no text, no calligraphy, no inscriptions, no seals, no stamps, no borders, no decorations around the building, " +
+  "precise architectural elevation illustration of an ancient Chinese wooden tower pavilion filling the entire frame, " +
+  "traditional jiehua painting style, fine ink linework with ochre and umber wash on warm beige antique paper, " +
   "detailed dougong brackets and grey tiled roofs, stone base with central stairs, " +
-  "clean composition, no text, no annotations, no seals, no calligraphy, vertical scroll composition, highly detailed";
+  "vertical composition, highly detailed";
 
 /**
  * 生图并把**图片字节落地到 KV**。
