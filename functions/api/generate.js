@@ -81,7 +81,7 @@ function renderExtinct(d) {
 
 // ---------- GLM 调用 ----------
 
-async function glm(prompt) {
+async function glm(prompt, env) {
   const res = await fetch(GLM_URL, {
     method: "POST",
     headers: {
@@ -99,23 +99,25 @@ async function glm(prompt) {
   return data.choices[0].message.content.trim();
 }
 
-async function genQuote(dateStr) {
+async function genQuote(dateStr, env) {
   const raw = await glm(
-    `请返回严格 JSON（不要 markdown 代码块）：{"text":"一句不超过22字的中文名言或诗句","from":"出处/作者"}。要求：适合电子墨水屏每日一言，避开烂大街的句子。`
+    `请返回严格 JSON（不要 markdown 代码块）：{"text":"一句不超过22字的中文名言或诗句","from":"出处/作者"}。要求：适合电子墨水屏每日一言，避开烂大街的句子。`,
+    env
   );
   const d = JSON.parse(raw);
   return renderQuote({ date: dateStr, ...d });
 }
 
 // 和风天气免费 API（无 Key 版：open-meteo，国内可用）
-async function genWeather(dateStr) {
+async function genWeather(dateStr, env) {
   // 北京示例，换成你的城市改 lat/lon
   const geo = await fetch("https://api.open-meteo.com/v1/forecast?latitude=39.9042&longitude=116.4074&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m&daily=temperature_2m_max,temperature_2m_min,weather_code&timezone=Asia%2FShanghai&forecast_days=1").then(r => r.json());
   const codeMap = {0:"晴",1:"多云",2:"多云",3:"阴",45:"雾",48:"雾",51:"毛毛雨",61:"小雨",63:"中雨",65:"大雨",71:"小雪",73:"中雪",75:"大雪",80:"阵雨",95:"雷雨"};
   const cur = geo.current, day = geo.daily;
   const cond = codeMap[cur.weather_code] || "多云";
   const raw = await glm(
-    `今天${cond}，气温${day.temperature_2m_min[0]}到${day.temperature_2m_max[0]}度。请返回严格 JSON：{"tip":"不超过50字的贴心生活提示"}。`
+    `今天${cond}，气温${day.temperature_2m_min[0]}到${day.temperature_2m_max[0]}度。请返回严格 JSON：{"tip":"不超过50字的贴心生活提示"}。`,
+    env
   );
   const d = JSON.parse(raw);
   return renderWeather({
@@ -127,17 +129,19 @@ async function genWeather(dateStr) {
   });
 }
 
-async function genArchitecture(dateStr) {
+async function genArchitecture(dateStr, env) {
   const raw = await glm(
-    `请随机选一座中国著名古建筑（避开最常见的故宫/长城），返回严格 JSON：{"name":"名称","location":"所在地","era":"年代","desc":"约90字的介绍","highlight":"一个看点，不超过20字"}。`
+    `请随机选一座中国著名古建筑（避开最常见的故宫/长城），返回严格 JSON：{"name":"名称","location":"所在地","era":"年代","desc":"约90字的介绍","highlight":"一个看点，不超过20字"}。`,
+    env
   );
   const d = JSON.parse(raw);
   return renderArchitecture({ date: dateStr, ...d });
 }
 
-async function genExtinct(dateStr) {
+async function genExtinct(dateStr, env) {
   const raw = await glm(
-    `请随机选一种已灭绝动物（避免连续重复常见选项），返回严格 JSON：{"name":"中文名","latin":"拉丁学名","year":"灭绝年份","desc":"约80字的介绍","note":"一句不超过25字的警示语"}。`
+    `请随机选一种已灭绝动物（避免连续重复常见选项），返回严格 JSON：{"name":"中文名","latin":"拉丁学名","year":"灭绝年份","desc":"约80字的介绍","note":"一句不超过25字的警示语"}。`,
+    env
   );
   const d = JSON.parse(raw);
   return renderExtinct({ date: dateStr, ...d });
@@ -163,7 +167,7 @@ export async function onRequestGet({ request, env }) {
   ];
   for (const [name, fn] of tasks) {
     try {
-      results[name] = { ok: true, html: await fn(dateStr) };
+      results[name] = { ok: true, html: await fn(dateStr, env) };
     } catch (e) {
       results[name] = { ok: false, error: String(e) };
     }
@@ -171,6 +175,7 @@ export async function onRequestGet({ request, env }) {
 
   // 写入 KV（绑定名称固定为 DASHBOARD_KV）
   const kv = env.DASHBOARD_KV;
+  if (!kv) throw new Error("DASHBOARD_KV 未绑定，请在 Pages 项目 Settings -> Bindings 添加 KV namespace");
   for (const [name, r] of Object.entries(results)) {
     if (r.ok) await kv.put(`page:${name}`, r.html);
   }
