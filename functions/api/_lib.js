@@ -319,7 +319,7 @@ function renderWeather(d) {
 
 function renderArchitecture(d) {
   const s = d.style;
-  // 有图：古籍立轴版式——左竖图（界画测绘风 768×1280）、右竖排引文（vertical-rl 从右往左），名称沉底
+  // 有图：古籍全竖排——左竖图（零遮挡）、右侧一列列从右往左：引文 → 出处 → 界栏线 → 名称 → 年代地点
   // 字体：京华老宋体（雕版宋复刻），文楷兜底
   if (d.hasImage) {
     const imgBlock = `<img src="/api/img/architecture?v=${d.imageVer}" alt="${d.name}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center 45%;display:block;"
@@ -332,20 +332,17 @@ function renderArchitecture(d) {
        * { margin: 0; padding: 0; box-sizing: border-box; }
        html, body { width: 800px; height: 480px; overflow: hidden; font-family: ${archFont}; background: ${s.bg}; color: ${s.text}; }`,
       `
-  <div style="width:800px;height:480px;background:${s.bg};display:flex;flex-direction:column;">
-    <div style="flex:1;display:flex;overflow:hidden;">
-      <div style="position:relative;width:400px;flex-shrink:0;background:${s.accent};">
-        <div id="archFallback" style="width:100%;height:100%;display:none;align-items:center;justify-content:center;font-size:52px;font-weight:bold;color:${s.bg};writing-mode:vertical-rl;letter-spacing:10px;">${d.name}</div>
-        ${imgBlock}
-      </div>
-      <div style="flex:1;writing-mode:vertical-rl;padding:30px 28px;display:flex;justify-content:flex-start;background:${s.bg};">
-        <div style="font-size:27px;font-weight:bold;letter-spacing:6px;line-height:2;color:${s.text};height:100%;">「${d.quote}」</div>
-        <div style="font-size:17px;color:${s.text};opacity:.75;letter-spacing:5px;height:100%;padding-top:8px;">${d.source}</div>
-      </div>
+  <div style="width:800px;height:480px;background:${s.bg};display:flex;">
+    <div style="position:relative;width:460px;flex-shrink:0;background:${s.accent};">
+      <div id="archFallback" style="width:100%;height:100%;display:none;align-items:center;justify-content:center;font-size:52px;font-weight:bold;color:${s.bg};writing-mode:vertical-rl;letter-spacing:10px;">${d.name}</div>
+      ${imgBlock}
     </div>
-    <div style="height:64px;flex-shrink:0;background:${s.accent};color:${s.bg};display:flex;justify-content:space-between;align-items:center;padding:0 30px;">
-      <span style="font-size:28px;font-weight:bold;letter-spacing:2px;">${d.name}</span>
-      <span style="font-size:18px;opacity:.94;">${d.era} · ${d.location}</span>
+    <div style="flex:1;writing-mode:vertical-rl;padding:36px 26px;display:flex;justify-content:flex-start;background:${s.bg};">
+      <div style="font-size:27px;font-weight:bold;letter-spacing:6px;line-height:2;height:100%;">「${d.quote}」</div>
+      <div style="font-size:17px;color:${s.text};opacity:.75;letter-spacing:5px;height:100%;padding-top:10px;">${d.source}</div>
+      <div style="width:1px;background:${s.accent};margin:0 16px;"></div>
+      <div style="font-size:32px;font-weight:bold;letter-spacing:9px;height:100%;">${d.name}</div>
+      <div style="font-size:15px;opacity:.7;letter-spacing:4px;height:100%;padding-top:8px;">${d.era} · ${d.location}</div>
     </div>
   </div>`);
   }
@@ -528,12 +525,12 @@ const E6_STYLE_PROMPT =
 const IMAGE_SIZE = "1280x768"; // 5:3 比例生成，展示时缩放为 800x480
 
 // 古建筑页专属风格：界画测绘图风（用户参考图）——精细木构立面线描 + 赭石淡彩 +
-// 仿古纸底 + 两侧竖排汉字注记，竖构图配古籍竖排版式（忽略 E6 六色约束）
+// 仿古纸底，只要建筑本体，画面无任何注记文字与印章，竖构图（忽略 E6 六色约束）
 const ARCH_STYLE_PROMPT =
   "traditional Chinese jiehua architectural painting, precise elevation drawing of an ancient wooden tower pavilion, " +
   "fine ink linework with ochre and umber wash on warm beige antique paper, " +
   "detailed dougong brackets and grey tiled roofs, stone base with central stairs, " +
-  "small vertical Chinese calligraphy annotations on both sides, vertical scroll composition, highly detailed";
+  "clean composition, no text, no annotations, no seals, no calligraphy, vertical scroll composition, highly detailed";
 
 /**
  * 生图并把**图片字节落地到 KV**。
