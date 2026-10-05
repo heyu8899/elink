@@ -191,8 +191,14 @@ function setMsg(text, cls) {
 }
 
 async function refreshOne(name, btn) {
-  btn.disabled = true; btn.textContent = "生成中…";
-  setMsg(`正在重新生成「${PAGE_LABELS[name] || name}」…`);
+  btn.disabled = true;
+  const slow = name === "landmark";
+  btn.textContent = slow ? "生成中(含生图)…" : "生成中…";
+  setMsg(
+    slow
+      ? "正在重新生成「地标」：含 AI 生图，约 30-90 秒，请勿关闭或刷新页面，完成后状态表会自动更新…"
+      : `正在重新生成「${PAGE_LABELS[name] || name}」…`
+  );
   const { ok, status, data } = await jfetch("/api/refresh/" + name);
   btn.disabled = false; btn.textContent = "刷新此页";
   if (status === 403) return showLogin();
