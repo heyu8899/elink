@@ -80,6 +80,16 @@ function renderExtinct(d) {
 }
 
 // ---------- GLM 调用（带 429 自动重试） ----------
+// 模型有时会给回复套 ```json 代码块，这里剥壳再解析
+function parseLoose(raw) {
+  let t = raw.trim();
+  const m = t.match(/```(?:json)?\s*([\s\S]*?)```/);
+  if (m) t = m[1].trim();
+  const start = t.indexOf("{"), end = t.lastIndexOf("}");
+  if (start > 0 || end < t.length - 1) t = t.slice(start, end + 1);
+  return JSON.parse(t);
+}
+
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -122,7 +132,7 @@ async function genQuote(dateStr, env) {
     `请返回严格 JSON（不要 markdown 代码块）：{"text":"一句不超过22字的中文名言或诗句","from":"出处/作者"}。要求：适合电子墨水屏每日一言，避开烂大街的句子。`,
     env
   );
-  const d = JSON.parse(raw);
+  const d = parseLoose(raw);
   return renderQuote({ date: dateStr, ...d });
 }
 
@@ -137,7 +147,7 @@ async function genWeather(dateStr, env) {
     `今天${cond}，气温${day.temperature_2m_min[0]}到${day.temperature_2m_max[0]}度。请返回严格 JSON：{"tip":"不超过50字的贴心生活提示"}。`,
     env
   );
-  const d = JSON.parse(raw);
+  const d = parseLoose(raw);
   return renderWeather({
     date: dateStr, city: "北京", temp: Math.round(cur.temperature_2m),
     condition: cond, humidity: cur.relative_humidity_2m,
@@ -152,7 +162,7 @@ async function genArchitecture(dateStr, env) {
     `请随机选一座中国著名古建筑（避开最常见的故宫/长城），返回严格 JSON：{"name":"名称","location":"所在地","era":"年代","desc":"约90字的介绍","highlight":"一个看点，不超过20字"}。`,
     env
   );
-  const d = JSON.parse(raw);
+  const d = parseLoose(raw);
   return renderArchitecture({ date: dateStr, ...d });
 }
 
@@ -161,7 +171,7 @@ async function genExtinct(dateStr, env) {
     `请随机选一种已灭绝动物（避免连续重复常见选项），返回严格 JSON：{"name":"中文名","latin":"拉丁学名","year":"灭绝年份","desc":"约80字的介绍","note":"一句不超过25字的警示语"}。`,
     env
   );
-  const d = JSON.parse(raw);
+  const d = parseLoose(raw);
   return renderExtinct({ date: dateStr, ...d });
 }
 
