@@ -1,0 +1,11 @@
+{
+  "schedules": [
+    {
+      "name": "daily-generate",
+      "cron": "0 7 * * *",
+      "path": "/api/generate",
+      "method": "GET",
+      "timezone": "Asia/Shanghai"
+    }
+  ]
+}

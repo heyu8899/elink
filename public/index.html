@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><title>墨水屏看板 · 状态</title>
+<style>
+  body { font-family: sans-serif; max-width: 720px; margin: 40px auto; color: #222; }
+  h1 { font-size: 22px; } .card { border: 1px solid #ddd; border-radius: 8px; padding: 16px 20px; margin: 12px 0; }
+  a { color: #2c5f8a; }
+  code { background: #f4f4f4; padding: 2px 6px; border-radius: 4px; }
+</style></head>
+<body>
+<h1>墨水屏看板 · 部署成功</h1>
+<p>四个页面的固定 URL（绑到 SenseCraft HMI 的 Web Content 用）：</p>
+<div class="card">一言 <a href="/api/page/quote">/api/page/quote</a></div>
+<div class="card">天气 <a href="/api/page/weather">/api/page/weather</a></div>
+<div class="card">古建筑 <a href="/api/page/architecture">/api/page/architecture</a></div>
+<div class="card">灭绝动物 <a href="/api/page/extinct">/api/page/extinct</a></div>
+<p>首次使用：手动访问 <code>/api/generate</code> 触发一次内容生成（配了 CRON_SECRET 的话带上 ?key=xxx）。</p>
+<p>之后每天 07:00 自动更新。</p>
+</body>
+</html>

@@ -1,0 +1,6 @@
+name = "epd-dashboard-cron"
+main = "worker.js"
+compatibility_date = "2024-09-01"
+
+[triggers]
+crons = ["0 23 * * *"]  # UTC 23:00 = 北京时间每天 07:00
