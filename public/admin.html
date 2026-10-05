@@ -113,11 +113,21 @@
   <h2>图床（固定地址图片）</h2>
   <div class="card">
     <div class="row">
-      <input type="file" id="picFile">
-      <button class="primary" onclick="uploadPic()">上传</button>
+      <input type="file" id="picFile" multiple accept="image/*,video/*">
+      <input type="file" id="picDir" webkitdirectory>
+      <button class="primary" onclick="uploadPics()">批量上传</button>
       <span id="picMsg"></span>
     </div>
-    <p class="muted" style="margin-top:8px">上传后获得固定地址：<code>https://本站/api/pic/文件名</code>，可直接外链引用。单文件 ≤ 20MB，存储在服务端 KV。</p>
+    <p class="muted" style="margin-top:8px">第一个框可按住 Ctrl 多选文件；第二个框可整选一个文件夹（保留内部目录结构）。单文件 ≤ 20MB。</p>
+    <div class="row" style="margin-top:8px">
+      <span class="muted">随机展示（每天自动换一张，当天内固定）：</span><code id="randomUrl"></code>
+      <button onclick="copyRandom()">复制</button>
+    </div>
+    <div class="row">
+      <span class="muted">每次访问都随机：</span><code id="randomUrlEach"></code>
+      <button onclick="copyRandomEach()">复制</button>
+    </div>
+    <p class="muted">随机只从 image/* 中抽；想限定文件夹可加参数，如 <code>/api/random-pic?folder=风景</code>（按上传路径前缀过滤）。</p>
     <div id="picList" style="margin-top:10px"></div>
   </div>
 </div>
@@ -149,6 +159,7 @@ async function showPanel() {
   document.getElementById("loginView").classList.add("hidden");
   document.getElementById("panelView").classList.remove("hidden");
   await Promise.all([loadStatus(), loadConfig(), loadPics()]);
+  updateRandomUrls();
 }
 
 async function login() {
@@ -400,26 +411,55 @@ async function loadPics() {
   if (!(data.items || []).length) list.innerHTML = '<p class="muted">还没有上传过图片</p>';
 }
 
-async function uploadPic() {
-  const input = document.getElementById("picFile");
-  const f = input.files && input.files[0];
-  if (!f) return setPicMsg("请先选择文件", "err");
-  if (f.size > 20 * 1024 * 1024) return setPicMsg("文件超过 20MB 上限", "err");
-  setPicMsg("上传中…");
-  const r = await fetch("/api/pic/" + encodeURIComponent(f.name), {
-    method: "PUT",
-    headers: { "Content-Type": f.type || "application/octet-stream" },
-    body: f,
-  });
-  if (r.status === 403) return showLogin();
-  const d = await r.json().catch(() => ({}));
-  if (d.ok) {
-    setPicMsg("已上传：" + d.url, "ok");
-    input.value = "";
-    loadPics();
-  } else {
-    setPicMsg(d.error || "上传失败", "err");
+function updateRandomUrls() {
+  document.getElementById("randomUrl").textContent = location.origin + "/api/random-pic";
+  document.getElementById("randomUrlEach").textContent = location.origin + "/api/random-pic?each=1";
+}
+
+function copyRandom() {
+  const t = document.getElementById("randomUrl").textContent;
+  navigator.clipboard.writeText(t).then(() => setPicMsg("已复制：" + t, "ok")).catch(() => setPicMsg("复制失败：" + t, "err"));
+}
+
+function copyRandomEach() {
+  const t = document.getElementById("randomUrlEach").textContent;
+  navigator.clipboard.writeText(t).then(() => setPicMsg("已复制：" + t, "ok")).catch(() => setPicMsg("复制失败：" + t, "err"));
+}
+
+async function uploadPics() {
+  const files = [...(document.getElementById("picFile").files || [])];
+  const dirFiles = [...(document.getElementById("picDir").files || [])];
+  const list = dirFiles.length ? dirFiles : files;
+  if (!list.length) return setPicMsg("请先选择文件或文件夹", "err");
+
+  let okCount = 0, failCount = 0;
+  for (let i = 0; i < list.length; i++) {
+    const f = list[i];
+    setPicMsg(`上传中 ${i + 1}/${list.length}：${f.name}`);
+    // 文件夹上传时用相对路径（去掉顶层文件夹名）作为图片 key，保留目录结构
+    let key = f.name;
+    if (dirFiles.length) {
+      const parts = (f.webkitRelativePath || f.name).split("/");
+      parts.shift();
+      key = parts.join("/") || f.name;
+    }
+    if (f.size > 20 * 1024 * 1024) { failCount++; continue; }
+    try {
+      const r = await fetch("/api/pic/" + encodeURIComponent(key).replace(/%2F/g, "/"), {
+        method: "PUT",
+        headers: { "Content-Type": f.type || "application/octet-stream" },
+        body: f,
+      });
+      if (r.status === 403) return showLogin();
+      if (r.ok) okCount++; else failCount++;
+    } catch (e) {
+      failCount++;
+    }
   }
+  setPicMsg(`上传完成：成功 ${okCount} 个，失败 ${failCount} 个`, failCount ? "err" : "ok");
+  document.getElementById("picFile").value = "";
+  document.getElementById("picDir").value = "";
+  loadPics();
 }
 
 initConfigUI();

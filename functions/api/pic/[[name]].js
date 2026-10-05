@@ -23,9 +23,12 @@ const MAX_SIZE = 20 * 1024 * 1024;
 function safeName(raw) {
   let name;
   try { name = decodeURIComponent(raw || ""); } catch { return null; }
-  name = name.trim();
-  if (!name || name.length > 100) return null;
-  if (name.includes("/") || name.includes("\\") || name.startsWith(".")) return null;
+  // 支持文件夹结构：反斜杠统一为斜杠，压缩连续斜杠
+  name = name.trim().replace(/\\/g, "/").replace(/\/+/g, "/");
+  if (!name || name.length > 200) return null;
+  if (name.startsWith("/") || name.endsWith("/")) return null;
+  // 每一段都不允许以点开头（防隐藏文件与路径穿越）
+  if (name.split("/").some((s) => !s || s.startsWith("."))) return null;
   return name;
 }
 
