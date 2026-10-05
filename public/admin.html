@@ -3,78 +3,179 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>墨水屏看板 · 管理后台</title>
+<title>墨水屏看板 · 管理台</title>
 <style>
-  body { font-family: sans-serif; max-width: 780px; margin: 40px auto; color: #222; padding: 0 16px; }
-  h1 { font-size: 22px; }
-  h2 { font-size: 17px; margin-top: 28px; }
-  .card { border: 1px solid #ddd; border-radius: 8px; padding: 16px 20px; margin: 12px 0; }
-  table { width: 100%; border-collapse: collapse; font-size: 14px; }
-  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid #eee; }
-  th { color: #666; font-weight: normal; }
-  button { cursor: pointer; border: 1px solid #2c5f8a; background: #fff; color: #2c5f8a;
-           border-radius: 6px; padding: 6px 14px; font-size: 13px; }
-  button.primary { background: #2c5f8a; color: #fff; }
-  button:disabled { opacity: .5; cursor: wait; }
-  input[type=password], select { padding: 8px; border: 1px solid #ccc; border-radius: 6px; font-size: 14px; }
-  .muted { color: #888; font-size: 13px; }
-  .ok { color: #1a7f4b; font-weight: bold; } .err { color: #b03030; font-weight: bold; }
-  .hidden { display: none; }
-  .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
-  .spread { justify-content: space-between; }
-  #msg { font-size: 14px; min-height: 20px; max-width: 420px; }
-  .picItem { display:flex; gap:10px; align-items:center; padding:8px 0; border-bottom:1px solid #eee; font-size:13px; flex-wrap:wrap; }
-  .picItem img { height:56px; border-radius:4px; background:#f4f4f4; }
-  .picItem .pname { font-weight:bold; word-break:break-all; max-width:200px; }
-  a { color: #2c5f8a; }
+:root {
+  --paper:#F1EEE5; --ink:#1C1B17;
+  --ink55:rgba(28,27,23,.55); --ink30:rgba(28,27,23,.30); --ink14:rgba(28,27,23,.14);
+  --vermilion:#B3402A; --indigo:#2B5C8A; --moss:#4C7031;
+  --marker:rgba(233,200,80,.55);
+  --serif:"Noto Serif SC","Source Han Serif SC",serif;
+  --mono:ui-monospace,"Cascadia Mono",Consolas,"Courier New",monospace;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body { background:var(--paper); color:var(--ink); font-family:var(--serif);
+  font-size:13.5px; line-height:1.7; max-width:900px; margin:0 auto; padding:34px 24px 80px; }
+::selection { background:var(--marker); }
+a { color:var(--indigo); text-decoration:none; border-bottom:1px solid rgba(43,92,138,.35); }
+a:hover { border-bottom-color:var(--indigo); }
+
+/* 报头 */
+.masthead { display:flex; justify-content:space-between; align-items:flex-end; gap:16px;
+  border-bottom:3px double var(--ink); padding-bottom:16px; }
+.masthead h1 { font-size:30px; font-weight:700; letter-spacing:.04em; line-height:1.2; }
+.masthead .dot { color:var(--vermilion); margin:0 .16em; }
+.colophon { font-family:var(--mono); font-size:11px; color:var(--ink55); margin-top:7px; letter-spacing:.06em; }
+
+/* 节 */
+section { border-top:1px solid var(--ink14); margin-top:32px; padding-top:20px; }
+h2 { font-size:16px; font-weight:700; margin-bottom:14px; letter-spacing:.02em; }
+h2 em { font-style:normal; color:var(--vermilion); margin-right:.55em; }
+h2 .hint { font-family:var(--mono); font-size:11px; font-weight:400; color:var(--ink55);
+  margin-left:1em; letter-spacing:.05em; }
+
+/* 节目单式表格 */
+.tablewrap { overflow-x:auto; }
+table { width:100%; border-collapse:collapse; font-size:13.5px; }
+thead th { text-align:left; font-weight:400; font-size:11.5px; color:var(--ink55);
+  font-family:var(--mono); letter-spacing:.08em; border-bottom:1px solid var(--ink30);
+  padding:7px 12px 7px 0; white-space:nowrap; }
+tbody td { padding:9px 12px 9px 0; border-bottom:1px solid var(--ink14); vertical-align:middle; white-space:nowrap; }
+tbody td:last-child { white-space:normal; }
+.m { font-family:var(--mono); font-size:12.5px; }
+.dot { font-size:10px; margin-right:.45em; vertical-align:1.5px; }
+.dot.on { color:var(--moss); } .dot.off { color:var(--vermilion); }
+.ok { color:var(--moss); font-weight:700; } .err { color:var(--vermilion); font-weight:700; }
+td .name { font-weight:700; }
+
+/* 按钮：墨与朱砂 */
+button { font-family:var(--serif); font-size:13px; cursor:pointer;
+  background:transparent; color:var(--ink); border:1px solid var(--ink30);
+  border-radius:0; padding:6px 16px; transition:border-color .15s, background .15s, color .15s; }
+button:hover { border-color:var(--ink); }
+button.primary { background:var(--ink); color:var(--paper); border-color:var(--ink); }
+button.primary:hover { background:var(--vermilion); border-color:var(--vermilion); }
+button.ghost { border:none; text-decoration:underline; text-underline-offset:4px;
+  padding:6px 2px; color:var(--ink55); background:transparent; }
+button.ghost:hover { color:var(--vermilion); }
+button:disabled { opacity:.45; cursor:wait; }
+:focus-visible { outline:2px solid var(--vermilion); outline-offset:2px; }
+
+/* 表单 */
+input[type=password], select, textarea {
+  font-family:var(--serif); font-size:13.5px; color:var(--ink);
+  background:transparent; border:1px solid var(--ink30); border-radius:0; padding:7px 10px; }
+input:focus, select:focus, textarea:focus { border-color:var(--ink); }
+textarea { font-family:var(--mono); font-size:12.5px; line-height:1.6; width:100%; }
+select { cursor:pointer; }
+input[type=file] { font-family:var(--mono); font-size:12px; border:none; padding:0; }
+input[type=file]::file-selector-button { font-family:var(--serif); font-size:13px; cursor:pointer;
+  background:transparent; color:var(--ink); border:1px solid var(--ink30); border-radius:0;
+  padding:5px 12px; margin-right:8px; }
+input[type=file]::file-selector-button:hover { border-color:var(--ink); }
+
+.row { display:flex; gap:12px; align-items:center; flex-wrap:wrap; }
+.hidden { display:none; }
+.note { color:var(--ink55); font-size:12.5px; margin-top:10px; }
+.muted { color:var(--ink55); font-size:12.5px; }
+code { font-family:var(--mono); font-size:12px; background:rgba(28,27,23,.06); padding:1px 5px; }
+#msg, #cfgMsg, #pcfgMsg, #picMsg, #loginMsg { font-size:13px; }
+mark { background:var(--marker); color:var(--ink); padding:0 4px; }
+
+/* 墨闪：模拟墨水屏整屏刷新 */
+@keyframes inkflash { 0% { background:rgba(179,64,42,.16); } 100% { background:transparent; } }
+tr.flash td { animation:inkflash 1s ease-out 1; }
+
+/* 图库行 */
+.picItem { display:flex; gap:12px; align-items:center; padding:8px 0;
+  border-bottom:1px solid var(--ink14); font-size:13px; flex-wrap:wrap; }
+.picItem img { height:52px; background:rgba(28,27,23,.05); outline:1px solid var(--ink14); }
+.picItem .pname { font-weight:700; word-break:break-all; max-width:220px; }
+
+/* 登录扉页 */
+.titlepage { max-width:460px; margin:90px auto 0; text-align:center; }
+.titlepage .masthead { border-bottom:none; border-top:3px double var(--ink);
+  padding:18px 0 0; margin-bottom:26px; justify-content:center; }
+.titlepage label { display:block; font-size:12px; color:var(--ink55);
+  letter-spacing:.3em; margin-bottom:8px; }
+.titlepage .row { justify-content:center; margin-top:14px; }
+.titlepage .note { margin-top:18px; }
+
+/* 入场编排（一次性，尊重系统设置） */
+@media (prefers-reduced-motion: no-preference) {
+  @keyframes rise { from { opacity:0; transform:translateY(7px); } to { opacity:1; transform:none; } }
+  .masthead, section, .titlepage { animation:rise .5s ease-out both; }
+  section:nth-of-type(1) { animation-delay:.05s; }
+  section:nth-of-type(2) { animation-delay:.11s; }
+  section:nth-of-type(3) { animation-delay:.17s; }
+  section:nth-of-type(4) { animation-delay:.23s; }
+}
+
+footer { border-top:1px solid var(--ink14); margin-top:44px; padding-top:14px;
+  font-family:var(--mono); font-size:11px; color:var(--ink55); letter-spacing:.06em; }
+
+@media (max-width:640px) {
+  body { padding:20px 14px 60px; }
+  .masthead { flex-direction:column; align-items:flex-start; }
+  .masthead h1 { font-size:24px; }
+  tbody td, thead th { padding-right:8px; }
+}
 </style>
 </head>
+
 <body>
 
-<!-- 登录视图 -->
+<!-- 扉页：登录 -->
 <div id="loginView" class="hidden">
-  <h1>墨水屏看板 · 登录</h1>
-  <div class="card">
+  <div class="titlepage">
+    <header class="masthead">
+      <div>
+        <h1>墨水屏看板<span class="dot">·</span>管理台</h1>
+        <p class="colophon">e-ink daily · 排印工房入口</p>
+      </div>
+    </header>
+    <label for="pw">管 理 密 码</label>
     <div class="row">
-      <input type="password" id="pw" placeholder="管理密码" style="width:220px"
+      <input type="password" id="pw" style="width:220px"
              onkeydown="if(event.key==='Enter')login()">
-      <button class="primary" id="loginBtn" onclick="login()">登录</button>
+      <button class="primary" id="loginBtn" onclick="login()">进入工房</button>
     </div>
-    <p id="loginMsg" class="muted"></p>
-    <p class="muted">密码由服务端环境变量 ADMIN_PASSWORD 配置；未配置时使用 CRON_SECRET。</p>
+    <p id="loginMsg" class="note"></p>
+    <p class="note">密码取自服务端环境变量 ADMIN_PASSWORD；未配置时与定时密钥相同。</p>
   </div>
 </div>
 
-<!-- 管理面板 -->
+<!-- 管理台 -->
 <div id="panelView" class="hidden">
-  <div class="row spread">
-    <h1>墨水屏看板 · 管理后台</h1>
-    <button onclick="logout()">登出</button>
-  </div>
+  <header class="masthead">
+    <div>
+      <h1>墨水屏看板<span class="dot">·</span>管理台</h1>
+      <p class="colophon">e-ink daily · 每天清晨，这张屏会被重新排印</p>
+    </div>
+    <button class="ghost" onclick="logout()">登出</button>
+  </header>
 
-  <h2>页面状态</h2>
-  <div class="card">
-    <table id="statusTable">
-      <thead><tr><th>页面</th><th>状态</th><th>更新时间</th><th>大小</th><th>预览</th><th>操作</th></tr></thead>
-      <tbody></tbody>
-    </table>
-    <p class="muted">"AI 图片资产"是 landmark 页配图的本体（存 KV，不会过期）。
-    单页刷新只重新生成该页；landmark 含生图较慢，约 30-60 秒。</p>
-  </div>
-
-  <div class="card">
-    <div class="row">
-      <button class="primary" id="allBtn" onclick="refreshAll()">全量刷新（重新生成全部 5 页）</button>
+  <section>
+    <h2><em>一</em>五页连播<span class="hint">quote / weather / architecture / extinct / landmark</span></h2>
+    <div class="row" style="margin-bottom:14px">
+      <button class="primary" id="allBtn" onclick="refreshAll()">整版重排</button>
       <span id="msg"></span>
     </div>
-  </div>
+    <div class="tablewrap">
+    <table id="statusTable">
+      <thead><tr><th>页面</th><th>墨态</th><th>排印时间</th><th>体量</th><th>预览</th><th></th></tr></thead>
+      <tbody></tbody>
+    </table>
+    </div>
+    <p class="note">「AI 图片资产」是地标页配图本体，存于服务端不会过期。地标含生图，重排约 30–90 秒。</p>
+  </section>
 
-  <h2>更新频率</h2>
-  <div class="card">
+  <section>
+    <h2><em>二</em>排印时刻<span class="hint">config:schedule · 即时生效</span></h2>
     <div class="row">
       <select id="modeSel" onchange="modeChanged()">
-        <option value="daily">每天定时生成</option>
-        <option value="interval">每隔 N 小时生成</option>
+        <option value="daily">每天定时排印</option>
+        <option value="interval">每隔 N 小时排印</option>
       </select>
       <span id="dailyOpts" class="row">每天
         <select id="hourSel"></select> 点（北京时间）
@@ -82,45 +183,43 @@
       <span id="intervalOpts" class="row hidden">每隔
         <select id="everySel"></select> 小时
       </span>
-      <button onclick="saveConfig()">保存</button>
+      <button onclick="saveConfig()">存入排程</button>
       <span id="cfgMsg"></span>
     </div>
-    <p class="muted">保存后即时生效，无需重新部署。这里控制的是<b>服务端内容生成频率</b>；
-    墨水屏设备多久拉取一次由设备端 HMI 的 Interval 设置决定（建议两边对齐）。
-    手动"全量刷新"不受此频率限制。定时 Worker 需设置为每小时触发一次（见 README）。</p>
-  </div>
+    <p class="note">这里控制<b>服务端内容生成频率</b>，保存即时生效；设备端多久拉取一次由 HMI 的 Interval 决定，建议两边对齐。「整版重排」不受此频率限制。</p>
+  </section>
 
-  <h2>页面配置（提示词 + 风格）</h2>
-  <div class="card">
+  <section>
+    <h2><em>三</em>每页版样<span class="hint">prompt + style json</span></h2>
     <div class="row">
       <select id="cfgPageSel" onchange="loadPageConfig()"></select>
-      <button onclick="resetPageConfig()">恢复默认</button>
+      <button onclick="resetPageConfig()">恢复默认版样</button>
       <span id="pcfgMsg"></span>
     </div>
-    <p class="muted" style="margin-top:10px">提示词 = 内容附加要求（拼在系统格式要求之后，随便写中文不会破坏生成），留空用默认：</p>
-    <textarea id="promptTa" rows="3" style="width:100%;box-sizing:border-box;font-size:13px;padding:8px;border:1px solid #ccc;border-radius:6px;"
+    <p class="note" style="margin-top:12px">提示词 = 内容附加要求（拼在系统格式要求之后，随便写中文不会破坏生成），留空用默认：</p>
+    <textarea id="promptTa" rows="3"
       placeholder="例：偏向冷门的唐宋诗句，避免励志鸡汤，意境偏孤寂"></textarea>
-    <p class="muted" style="margin-top:10px">风格 JSON（可留空）。字段：colors{bg,text,accent} / font{titleSize 16-120, bodySize 12-60, family:serif|sans} / layout{writingMode:horizontal|vertical 仅一言古建筑生效, align:left|center 仅一言生效}。颜色用 #RRGGBB，推荐墨水屏高对比色：</p>
-    <textarea id="styleTa" rows="6" style="width:100%;box-sizing:border-box;font-size:13px;padding:8px;border:1px solid #ccc;border-radius:6px;font-family:monospace;"
+    <p class="note" style="margin-top:12px">风格 JSON（可留空）。字段：colors{bg,text,accent} / font{titleSize 16-120, bodySize 12-60, family:serif|sans} / layout{writingMode:horizontal|vertical 仅一言古建筑生效, align:left|center 仅一言生效}。颜色用 #RRGGBB，推荐墨水屏高对比色：</p>
+    <textarea id="styleTa" rows="6"
       placeholder='{"colors":{"accent":"#C0392B"},"font":{"titleSize":44},"layout":{"writingMode":"vertical"}}'></textarea>
-    <p class="muted" id="histLine" style="margin-top:8px"></p>
-    <div class="row" style="margin-top:10px">
-      <button class="primary" onclick="savePageConfig()">保存配置</button>
-      <span class="muted">保存后点上方对应页面的"刷新此页"即可看到效果。</span>
+    <p class="note" id="histLine" style="margin-top:10px"></p>
+    <div class="row" style="margin-top:12px">
+      <button class="primary" onclick="savePageConfig()">存入版样</button>
+      <span class="muted">保存后点该页的「重排此页」即可看到效果。</span>
     </div>
-  </div>
+  </section>
 
-  <h2>图床（固定地址图片）</h2>
-  <div class="card">
+  <section>
+    <h2><em>四</em>图库<span class="hint">pic store · 单图 ≤20MB · KV 存储</span></h2>
     <div class="row">
       <input type="file" id="picFile" multiple accept="image/*,video/*">
       <input type="file" id="picDir" webkitdirectory>
-      <button class="primary" onclick="uploadPics()">批量上传</button>
+      <button class="primary" onclick="uploadPics()">批量制版</button>
       <span id="picMsg"></span>
     </div>
-    <p class="muted" style="margin-top:8px">第一个框可按住 Ctrl 多选文件；第二个框可整选一个文件夹（保留内部目录结构）。单文件 ≤ 20MB。</p>
-    <div class="row" style="margin-top:8px">
-      <span class="muted">随机展示（每天自动换一张，当天内固定）：</span><code id="randomUrl"></code>
+    <p class="note" style="margin-top:10px">第一个框可按住 Ctrl 多选文件；第二个框可整选一个文件夹（保留内部目录结构）。</p>
+    <div class="row" style="margin-top:10px">
+      <span class="muted">每日一图（当天固定，自动换）：</span><code id="randomUrl"></code>
       <button onclick="copyRandom()">复制</button>
       <button onclick="rebuildIndex()">重建索引</button>
     </div>
@@ -128,9 +227,11 @@
       <span class="muted">每次访问都随机：</span><code id="randomUrlEach"></code>
       <button onclick="copyRandomEach()">复制</button>
     </div>
-    <p class="muted">随机只从 image/* 中抽；想限定文件夹可加参数，如 <code>/api/random-pic?folder=风景</code>（按上传路径前缀过滤）。</p>
+    <p class="note">随机只从 image/* 中抽；想限定文件夹可加参数，如 <code>/api/random-pic?folder=风景</code>（按上传路径前缀过滤）。</p>
     <div id="picList" style="margin-top:10px"></div>
-  </div>
+  </section>
+
+  <footer>墨水屏看板 · Cloudflare Pages + KV · 今天也要好好排印</footer>
 </div>
 
 <script>
@@ -166,7 +267,7 @@ async function showPanel() {
 async function login() {
   const btn = document.getElementById("loginBtn");
   const msg = document.getElementById("loginMsg");
-  btn.disabled = true; msg.textContent = "登录中..."; msg.className = "muted";
+  btn.disabled = true; msg.textContent = "正在核对版令…"; msg.className = "note";
   const { ok, data } = await jfetch("/api/auth", {
     method: "POST", headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ password: document.getElementById("pw").value }),
@@ -198,13 +299,14 @@ async function loadStatus() {
     const preview = isImg
       ? `<a href="/api/img/${name.slice(4)}" target="_blank">查看图片</a>`
       : `<a href="/api/page/${name}" target="_blank">打开页面</a>`;
-    const action = isImg ? "—" : `<button onclick="refreshOne('${name}', this)">刷新此页</button>`;
+    const action = isImg ? "—" : `<button onclick="refreshOne('${name}', this)">重排此页</button>`;
     const tr = document.createElement("tr");
+    tr.dataset.page = name;
     tr.innerHTML = `
-      <td>${PAGE_LABELS[name] || name}</td>
-      <td class="${s.generated ? "ok" : "err"}">${s.generated ? "已生成" : "未生成"}</td>
-      <td>${s.updatedAt || "-"}</td>
-      <td>${fmtSize(s.size)}</td>
+      <td><span class="name">${PAGE_LABELS[name] || name}</span></td>
+      <td class="${s.generated ? "ok" : "err"}"><span class="dot ${s.generated ? "on" : "off"}">${s.generated ? "●" : "○"}</span>${s.generated ? "已排印" : "待排印"}</td>
+      <td><span class="m">${s.updatedAt || "-"}</span></td>
+      <td><span class="m">${fmtSize(s.size)}</span></td>
       <td>${preview}</td>
       <td>${action}</td>`;
     tbody.appendChild(tr);
@@ -220,37 +322,42 @@ function setMsg(text, cls) {
 async function refreshOne(name, btn) {
   btn.disabled = true;
   const slow = name === "landmark";
-  btn.textContent = slow ? "生成中(含生图)…" : "生成中…";
+  btn.textContent = slow ? "排印中(含生图)…" : "排印中…";
   setMsg(
     slow
-      ? "正在重新生成「地标」：含 AI 生图，约 30-90 秒，请勿关闭或刷新页面，完成后状态表会自动更新…"
-      : `正在重新生成「${PAGE_LABELS[name] || name}」…`
+      ? "正在重排「地标」：含 AI 生图，约 30-90 秒，请勿关闭或刷新页面，完成后墨态表会自动更新…"
+      : `正在重排「${PAGE_LABELS[name] || name}」…`
   );
   const { ok, status, data } = await jfetch("/api/refresh/" + name);
-  btn.disabled = false; btn.textContent = "刷新此页";
+  btn.disabled = false; btn.textContent = "重排此页";
   if (status === 403) return showLogin();
   setMsg(
-    ok ? `「${PAGE_LABELS[name]}」已更新：${data.updatedAt || ""}` : `失败：${data.error || status}`,
+    ok ? `「${PAGE_LABELS[name]}」已重新排印 · ${data.updatedAt || ""}` : `失败：${data.error || status}`,
     ok ? "ok" : "err"
   );
-  loadStatus();
+  await loadStatus();
+  if (ok) {
+    const row = document.querySelector(`tr[data-page="${name}"]`);
+    if (row) row.classList.add("flash");
+  }
 }
 
 async function refreshAll() {
   const btn = document.getElementById("allBtn");
-  btn.disabled = true; btn.textContent = "生成中（约 30-60 秒）…";
-  setMsg("正在全量重新生成 5 个页面…");
+  btn.disabled = true; btn.textContent = "整版排印中…";
+  setMsg("整版重排中：五页并行排印，约 30-60 秒…");
   const { ok, status, data } = await jfetch("/api/generate?force=1");
-  btn.disabled = false; btn.textContent = "全量刷新（重新生成全部 5 页）";
+  btn.disabled = false; btn.textContent = "整版重排";
   if (status === 403) return showLogin();
   setMsg(
-    ok ? "全部页面已更新" : `部分失败：${JSON.stringify(data.detail || data.error)}`,
+    ok ? "五页已重新排印，设备下次拉取即生效" : `部分失败：${JSON.stringify(data.detail || data.error)}`,
     ok ? "ok" : "err"
   );
-  loadStatus();
+  await loadStatus();
+  if (ok) document.querySelectorAll("#statusTable tbody tr").forEach(r => r.classList.add("flash"));
 }
 
-// ---------- 更新频率配置 ----------
+// ---------- 排印时刻 ----------
 
 function initConfigUI() {
   const hourSel = document.getElementById("hourSel");
@@ -297,11 +404,11 @@ async function saveConfig() {
   });
   const el = document.getElementById("cfgMsg");
   if (status === 403) return showLogin();
-  el.textContent = ok ? "已保存，即刻生效" : (data.error || "保存失败");
+  el.textContent = ok ? "已存入排程，即刻生效" : (data.error || "保存失败");
   el.className = ok ? "ok" : "err";
 }
 
-// ---------- 页面配置（提示词 + 风格） ----------
+// ---------- 每页版样 ----------
 
 function initPageCfg() {
   const sel = document.getElementById("cfgPageSel");
@@ -350,9 +457,8 @@ async function savePageConfig() {
   });
   if (status === 403) return showLogin();
   if (ok) {
-    // 回显规范化后的配置（实际生效的就是这份）
     document.getElementById("styleTa").value = data.style || "";
-    setPcfgMsg("已保存。点上方该页的「刷新此页」查看效果", "ok");
+    setPcfgMsg("版样已更新。点该页的「重排此页」查看效果", "ok");
   } else {
     setPcfgMsg(data.error || "保存失败", "err");
   }
@@ -365,13 +471,13 @@ async function resetPageConfig() {
   if (ok) {
     document.getElementById("promptTa").value = "";
     document.getElementById("styleTa").value = "";
-    setPcfgMsg("已恢复系统默认", "ok");
+    setPcfgMsg("已恢复默认版样", "ok");
   } else {
     setPcfgMsg(data.error || "操作失败", "err");
   }
 }
 
-// ---------- 图床 ----------
+// ---------- 图库 ----------
 
 function setPicMsg(text, cls) {
   const el = document.getElementById("picMsg");
@@ -391,7 +497,7 @@ async function loadPics() {
     row.className = "picItem";
     if (isImg) { const im = document.createElement("img"); im.src = url; row.appendChild(im); }
     const name = document.createElement("span"); name.className = "pname"; name.textContent = it.name;
-    const meta = document.createElement("span"); meta.textContent = fmtSize(it.size) + " · " + (it.updatedAt || "").replace("T", " ").slice(0, 19);
+    const meta = document.createElement("span"); meta.className = "m"; meta.textContent = fmtSize(it.size) + " · " + (it.updatedAt || "").replace("T", " ").slice(0, 19);
     const link = document.createElement("a"); link.href = url; link.target = "_blank"; link.textContent = "打开";
     const copy = document.createElement("button"); copy.textContent = "复制链接";
     copy.onclick = () => {
@@ -409,7 +515,7 @@ async function loadPics() {
     row.append(name, meta, link, copy, del);
     list.appendChild(row);
   }
-  if (!(data.items || []).length) list.innerHTML = '<p class="muted">还没有上传过图片</p>';
+  if (!(data.items || []).length) list.innerHTML = '<p class="note">图库还是空的，选几张图传上来</p>';
 }
 
 function updateRandomUrls() {
@@ -444,8 +550,7 @@ async function uploadPics() {
   let okCount = 0, failCount = 0;
   for (let i = 0; i < list.length; i++) {
     const f = list[i];
-    setPicMsg(`上传中 ${i + 1}/${list.length}：${f.name}`);
-    // 文件夹上传时用相对路径（去掉顶层文件夹名）作为图片 key，保留目录结构
+    setPicMsg(`制版中 ${i + 1}/${list.length}：${f.name}`);
     let key = f.name;
     if (dirFiles.length) {
       const parts = (f.webkitRelativePath || f.name).split("/");
