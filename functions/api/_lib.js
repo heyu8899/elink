@@ -324,8 +324,9 @@ function renderArchitecture(d) {
   if (d.hasImage) {
     const imgBlock = `<img src="/api/img/architecture?v=${d.imageVer}" alt="${d.name}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center 35%;display:block;"
          onerror="this.style.display='none';document.getElementById('archFallback').style.display='flex';">`;
-    const archFont = `'LXGW WenKai Screen','LXGW WenKai',${s.fontFamily}`;
-    const fontFace = `@font-face { font-family:'LXGW WenKai Screen'; src:url('/fonts/lxgw-wenkai-screen-subset.woff2') format('woff2'); font-weight:400; font-style:normal; font-display:swap; }`;
+    const archFont = `'KingHwa OldSong','LXGW WenKai Screen',${s.fontFamily}`;
+    const fontFace = `@font-face { font-family:'KingHwa OldSong'; src:url('/fonts/kinghwa-oldsong-subset.woff2') format('woff2'); font-weight:400; font-style:normal; font-display:swap; }
+                       @font-face { font-family:'LXGW WenKai Screen'; src:url('/fonts/lxgw-wenkai-screen-subset.woff2') format('woff2'); font-weight:400; font-style:normal; font-display:swap; }`;
     return pageShell("古建筑",
       `${fontFace}
        * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -347,8 +348,9 @@ function renderArchitecture(d) {
   </div>`);
   }
   // 无图降级：accent 名称栏 + 引文居中（同样应用文楷）
-  const archFont = `'LXGW WenKai Screen','LXGW WenKai',${s.fontFamily}`;
-  const fontFace = `@font-face { font-family:'LXGW WenKai Screen'; src:url('/fonts/lxgw-wenkai-screen-subset.woff2') format('woff2'); font-weight:400; font-style:normal; font-display:swap; }`;
+  const archFont = `'KingHwa OldSong','LXGW WenKai Screen',${s.fontFamily}`;
+  const fontFace = `@font-face { font-family:'KingHwa OldSong'; src:url('/fonts/kinghwa-oldsong-subset.woff2') format('woff2'); font-weight:400; font-style:normal; font-display:swap; }
+                       @font-face { font-family:'LXGW WenKai Screen'; src:url('/fonts/lxgw-wenkai-screen-subset.woff2') format('woff2'); font-weight:400; font-style:normal; font-display:swap; }`;
   return pageShell("古建筑",
     `${fontFace}
      * { margin: 0; padding: 0; box-sizing: border-box; }
