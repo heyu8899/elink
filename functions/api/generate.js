@@ -175,6 +175,80 @@ async function genExtinct(dateStr, env) {
   return renderExtinct({ date: dateStr, ...d });
 }
 
+// ---------- 地标建筑页：诗词 + AI 生图（E6 墨水屏适配） ----------
+
+// 生图提示词模板：E6 只有黑白红黄蓝绿 6 色、无灰度、800x480
+// 关键约束写死在 prompt 里：扁平插画、大面积色块、高对比、无渐变无细纹理
+const E6_STYLE_PROMPT =
+  "flat vector illustration, bold solid color blocks, high contrast, " +
+  "limited color palette of red yellow blue green black on white background, " +
+  "no gradient, no texture, no fine details, clean minimal composition, " +
+  "thick shapes, e-ink poster style, landscape 5:3";
+
+const IMAGE_SIZE = "1280x768"; // 5:3 比例生成，展示时缩放为 800x480
+
+async function genImage(prompt, env) {
+  const res = await fetch("https://open.bigmodel.cn/api/paas/v4/images/generations", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${env.GLM_API_KEY}`,
+    },
+    body: JSON.stringify({
+      model: "cogview-4",       // 智谱生图模型，走同一个 GLM_API_KEY
+      prompt,
+      size: IMAGE_SIZE,
+    }),
+  });
+  if (!res.ok) throw new Error(`CogView HTTP ${res.status}: ${await res.text()}`);
+  const data = await res.json();
+  const url = data?.data?.[0]?.url;
+  if (!url) throw new Error("CogView 未返回图片 URL");
+  return url;
+}
+
+function renderLandmark(d) {
+  return pageShell("地标", `
+  <div style="width:800px;height:480px;background:#FFFFFF;display:flex;overflow:hidden;">
+    <div style="width:460px;height:480px;position:relative;background:#F4F1E8;flex-shrink:0;">
+      ${d.imageUrl
+        ? `<img src="${d.imageUrl}" alt="${d.name}" style="width:100%;height:100%;object-fit:cover;display:block;"
+             onerror="this.style.display='none';document.getElementById('imgFallback').style.display='flex';">`
+        : `<div id="imgFallback" style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:120px;color:#D8D2C0;">山</div>`}
+    </div>
+    <div style="flex:1;padding:34px 38px;box-sizing:border-box;display:flex;flex-direction:column;background:#FFFFFF;">
+      <div style="font-size:16px;letter-spacing:4px;color:#888;">每日地标 · ${d.date}</div>
+      <div style="font-size:34px;font-weight:bold;margin-top:10px;line-height:1.3;">${d.name}</div>
+      <div style="font-size:17px;color:#666;margin-top:4px;">${d.location}</div>
+      <div style="margin-top:auto;">
+        <div style="font-size:23px;line-height:1.75;font-weight:bold;color:#8B2E2E;">「${d.poem}」</div>
+        <div style="font-size:15px;color:#999;margin-top:6px;">${d.poemSource}</div>
+      </div>
+      <div style="margin-top:16px;padding-top:12px;border-top:1px dashed #CCC;font-size:15px;line-height:1.6;color:#555;">${d.desc}</div>
+    </div>
+  </div>`);
+}
+
+async function genLandmark(dateStr, env) {
+  // 第一步：LLM 出主题 + 配套诗词（诗词与地标强关联）
+  const raw = await glm(
+    `请随机选一个中国城市的一处地标建筑或自然景观（每天不重复，兼顾知名与新颖），并配一句与之意境契合的古诗词。返回严格 JSON（不要代码块）：` +
+    `{"name":"地标名称","location":"省市名","poem":"一句古诗（含标点不超过20字）","poemSource":"诗名·作者","desc":"地标一句话介绍，不超过40字",` +
+    `"imagePrompt":"英文提示词，描述该地标的标志性外观与周围环境，简洁的扁平插画风格场景构图，30个英文单词以内"}`,
+    env
+  );
+  const d = parseLoose(raw);
+
+  // 第二步：拼上 E6 墨水屏风格约束后生图；失败不阻塞整页（文字页照常出）
+  let imageUrl = "";
+  try {
+    imageUrl = await genImage(`${d.imagePrompt}. ${E6_STYLE_PROMPT}`, env);
+  } catch (e) {
+    console.error("生图失败，页面使用占位图:", String(e));
+  }
+  return renderLandmark({ date: dateStr, imageUrl, ...d });
+}
+
 // ---------- 入口（Cloudflare Pages Functions：onRequestGet 处理 GET） ----------
 
 export async function onRequestGet({ request, env }) {
@@ -192,6 +266,7 @@ export async function onRequestGet({ request, env }) {
   const tasks = [
     ["quote", genQuote], ["weather", genWeather],
     ["architecture", genArchitecture], ["extinct", genExtinct],
+    ["landmark", genLandmark],
   ];
   for (const [name, fn] of tasks) {
     try {
@@ -204,8 +279,12 @@ export async function onRequestGet({ request, env }) {
   // 写入 KV（绑定名称固定为 DASHBOARD_KV）
   const kv = env.DASHBOARD_KV;
   if (!kv) throw new Error("DASHBOARD_KV 未绑定，请在 Pages 项目 Settings -> Bindings 添加 KV namespace");
+  const ts = new Date().toLocaleString("zh-CN", { timeZone: "Asia/Shanghai" });
   for (const [name, r] of Object.entries(results)) {
-    if (r.ok) await kv.put(`page:${name}`, r.html);
+    if (r.ok) {
+      await kv.put(`page:${name}`, r.html);
+      await kv.put(`meta:${name}`, ts);
+    }
   }
 
   return new Response(JSON.stringify({
