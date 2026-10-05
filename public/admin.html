@@ -23,6 +23,9 @@
   .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
   .spread { justify-content: space-between; }
   #msg { font-size: 14px; min-height: 20px; max-width: 420px; }
+  .picItem { display:flex; gap:10px; align-items:center; padding:8px 0; border-bottom:1px solid #eee; font-size:13px; flex-wrap:wrap; }
+  .picItem img { height:56px; border-radius:4px; background:#f4f4f4; }
+  .picItem .pname { font-weight:bold; word-break:break-all; max-width:200px; }
   a { color: #2c5f8a; }
 </style>
 </head>
@@ -106,6 +109,17 @@
       <span class="muted">保存后点上方对应页面的"刷新此页"即可看到效果。</span>
     </div>
   </div>
+
+  <h2>图床（固定地址图片）</h2>
+  <div class="card">
+    <div class="row">
+      <input type="file" id="picFile">
+      <button class="primary" onclick="uploadPic()">上传</button>
+      <span id="picMsg"></span>
+    </div>
+    <p class="muted" style="margin-top:8px">上传后获得固定地址：<code>https://本站/api/pic/文件名</code>，可直接外链引用。单文件 ≤ 20MB，存储在服务端 KV。</p>
+    <div id="picList" style="margin-top:10px"></div>
+  </div>
 </div>
 
 <script>
@@ -134,7 +148,7 @@ function showLogin() {
 async function showPanel() {
   document.getElementById("loginView").classList.add("hidden");
   document.getElementById("panelView").classList.remove("hidden");
-  await Promise.all([loadStatus(), loadConfig()]);
+  await Promise.all([loadStatus(), loadConfig(), loadPics()]);
 }
 
 async function login() {
@@ -342,6 +356,69 @@ async function resetPageConfig() {
     setPcfgMsg("已恢复系统默认", "ok");
   } else {
     setPcfgMsg(data.error || "操作失败", "err");
+  }
+}
+
+// ---------- 图床 ----------
+
+function setPicMsg(text, cls) {
+  const el = document.getElementById("picMsg");
+  el.textContent = text;
+  el.className = cls || "muted";
+}
+
+async function loadPics() {
+  const { status, data } = await jfetch("/api/pic");
+  if (status === 403) return showLogin();
+  const list = document.getElementById("picList");
+  list.innerHTML = "";
+  for (const it of (data.items || [])) {
+    const url = "/api/pic/" + encodeURIComponent(it.name);
+    const isImg = (it.contentType || "").startsWith("image/");
+    const row = document.createElement("div");
+    row.className = "picItem";
+    if (isImg) { const im = document.createElement("img"); im.src = url; row.appendChild(im); }
+    const name = document.createElement("span"); name.className = "pname"; name.textContent = it.name;
+    const meta = document.createElement("span"); meta.textContent = fmtSize(it.size) + " · " + (it.updatedAt || "").replace("T", " ").slice(0, 19);
+    const link = document.createElement("a"); link.href = url; link.target = "_blank"; link.textContent = "打开";
+    const copy = document.createElement("button"); copy.textContent = "复制链接";
+    copy.onclick = () => {
+      navigator.clipboard.writeText(location.origin + url)
+        .then(() => setPicMsg("链接已复制：" + location.origin + url, "ok"))
+        .catch(() => setPicMsg("复制失败，请手动复制：" + location.origin + url, "err"));
+    };
+    const del = document.createElement("button"); del.textContent = "删除";
+    del.onclick = async () => {
+      if (!confirm("确定删除 " + it.name + "？")) return;
+      const r = await fetch("/api/pic/" + encodeURIComponent(it.name), { method: "DELETE" });
+      if (r.status === 403) return showLogin();
+      loadPics();
+    };
+    row.append(name, meta, link, copy, del);
+    list.appendChild(row);
+  }
+  if (!(data.items || []).length) list.innerHTML = '<p class="muted">还没有上传过图片</p>';
+}
+
+async function uploadPic() {
+  const input = document.getElementById("picFile");
+  const f = input.files && input.files[0];
+  if (!f) return setPicMsg("请先选择文件", "err");
+  if (f.size > 20 * 1024 * 1024) return setPicMsg("文件超过 20MB 上限", "err");
+  setPicMsg("上传中…");
+  const r = await fetch("/api/pic/" + encodeURIComponent(f.name), {
+    method: "PUT",
+    headers: { "Content-Type": f.type || "application/octet-stream" },
+    body: f,
+  });
+  if (r.status === 403) return showLogin();
+  const d = await r.json().catch(() => ({}));
+  if (d.ok) {
+    setPicMsg("已上传：" + d.url, "ok");
+    input.value = "";
+    loadPics();
+  } else {
+    setPicMsg(d.error || "上传失败", "err");
   }
 }
 
