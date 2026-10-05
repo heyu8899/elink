@@ -322,7 +322,7 @@ function renderArchitecture(d) {
   // 有图：古籍全竖排——左竖图（零遮挡）、右侧一列列从右往左：引文 → 出处 → 界栏线 → 名称 → 年代地点
   // 字体：京华老宋体（雕版宋复刻），文楷兜底
   if (d.hasImage) {
-    const imgBlock = `<img src="/api/img/architecture?v=${d.imageVer}" alt="${d.name}" style="position:absolute;width:128%;height:128%;left:-15%;top:-13%;object-fit:cover;object-position:center;display:block;"
+    const imgBlock = `<img src="/api/img/architecture?v=${d.imageVer}" alt="${d.name}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center 42%;display:block;"
          onerror="this.style.display='none';document.getElementById('archFallback').style.display='flex';">`;
     const archFont = `'KingHwa OldSong','LXGW WenKai Screen',${s.fontFamily}`;
     const fontFace = `@font-face { font-family:'KingHwa OldSong'; src:url('/fonts/kinghwa-oldsong-subset.woff2') format('woff2'); font-weight:400; font-style:normal; font-display:swap; }
@@ -333,20 +333,20 @@ function renderArchitecture(d) {
        html, body { width: 800px; height: 480px; overflow: hidden; font-family: ${archFont}; background: ${s.bg}; color: ${s.text}; }`,
       `
   <div style="width:800px;height:480px;background:${s.bg};display:flex;">
-    <div style="position:relative;width:460px;flex-shrink:0;background:${s.accent};">
+    <div style="position:relative;width:440px;flex-shrink:0;background:${s.accent};">
       <div id="archFallback" style="width:100%;height:100%;display:none;align-items:center;justify-content:center;font-size:52px;font-weight:bold;color:${s.bg};writing-mode:vertical-rl;letter-spacing:10px;">${d.name}</div>
       ${imgBlock}
     </div>
-    <div style="flex:1;writing-mode:vertical-rl;padding:36px 26px;display:flex;justify-content:flex-start;background:${s.bg};">
-      <div style="font-size:27px;font-weight:bold;letter-spacing:6px;line-height:2;height:100%;">「${d.quote}」</div>
-      <div style="font-size:17px;color:${s.text};opacity:.75;letter-spacing:5px;height:100%;padding-top:10px;">${d.source}</div>
-      <div style="width:1px;background:${s.accent};margin:0 16px;"></div>
-      <div style="font-size:32px;font-weight:bold;letter-spacing:9px;height:100%;">${d.name}</div>
-      <div style="font-size:15px;opacity:.7;letter-spacing:4px;height:100%;padding-top:8px;">${d.era} · ${d.location}</div>
+    <div style="flex:1;writing-mode:vertical-rl;padding:32px 22px;background:${s.bg};overflow:hidden;">
+      <div style="display:inline-block;vertical-align:top;font-size:27px;font-weight:bold;letter-spacing:6px;line-height:2;max-height:400px;overflow:hidden;">「${d.quote}」</div>
+      <div style="display:inline-block;vertical-align:top;font-size:17px;opacity:.72;letter-spacing:5px;max-height:400px;overflow:hidden;padding-top:8px;">${d.source}</div>
+      <div style="display:inline-block;vertical-align:top;width:1px;height:370px;background:${s.accent};margin:0 18px;"></div>
+      <div style="display:inline-block;vertical-align:top;font-size:33px;font-weight:bold;letter-spacing:9px;max-height:400px;overflow:hidden;">${d.name}</div>
+      <div style="display:inline-block;vertical-align:top;font-size:15px;opacity:.68;letter-spacing:4px;max-height:400px;overflow:hidden;padding-top:8px;">${d.era} · ${d.location}</div>
     </div>
   </div>`);
   }
-  // 无图降级：名称竖排大字 + 引文竖排（同为古籍立轴风）
+  // 无图降级：名称竖排大字 + 引文竖排（块流竖排，不用 flex）
   const archFont = `'KingHwa OldSong','LXGW WenKai Screen',${s.fontFamily}`;
   const fontFace = `@font-face { font-family:'KingHwa OldSong'; src:url('/fonts/kinghwa-oldsong-subset.woff2') format('woff2'); font-weight:400; font-style:normal; font-display:swap; }
                        @font-face { font-family:'LXGW WenKai Screen'; src:url('/fonts/lxgw-wenkai-screen-subset.woff2') format('woff2'); font-weight:400; font-style:normal; font-display:swap; }`;
@@ -356,12 +356,12 @@ function renderArchitecture(d) {
      html, body { width: 800px; height: 480px; overflow: hidden; font-family: ${archFont}; background: ${s.bg}; color: ${s.text}; }`,
     `
   <div style="width:800px;height:480px;background:${s.bg};display:flex;">
-    <div style="width:320px;background:${s.accent};color:${s.bg};writing-mode:vertical-rl;display:flex;align-items:center;justify-content:center;padding:30px 0;">
-      <div style="font-size:44px;font-weight:bold;letter-spacing:10px;">${d.name}</div>
+    <div style="width:300px;background:${s.accent};color:${s.bg};writing-mode:vertical-rl;display:flex;align-items:center;justify-content:center;">
+      <div style="font-size:42px;font-weight:bold;letter-spacing:10px;">${d.name}</div>
     </div>
-    <div style="flex:1;writing-mode:vertical-rl;padding:32px 30px;display:flex;justify-content:flex-start;">
-      <div style="font-size:25px;font-weight:bold;letter-spacing:5px;line-height:2;height:100%;">「${d.quote}」</div>
-      <div style="font-size:16px;opacity:.75;letter-spacing:4px;height:100%;padding-top:10px;">${d.source}</div>
+    <div style="flex:1;writing-mode:vertical-rl;padding:34px 26px;background:${s.bg};overflow:hidden;">
+      <div style="display:inline-block;vertical-align:top;font-size:26px;font-weight:bold;letter-spacing:6px;line-height:2;max-height:400px;overflow:hidden;">「${d.quote}」</div>
+      <div style="display:inline-block;vertical-align:top;font-size:16px;opacity:.72;letter-spacing:5px;max-height:400px;overflow:hidden;padding-top:10px;">${d.source}</div>
     </div>
   </div>`);
 }
@@ -524,14 +524,13 @@ const E6_STYLE_PROMPT =
 
 const IMAGE_SIZE = "1280x768"; // 5:3 比例生成，展示时缩放为 800x480
 
-// 古建筑页专属风格：界画测绘图风——精细木构立面线描 + 赭石淡彩 + 仿古纸底，
-// 只要建筑本体充满画面，严禁任何题字/印章/边框，竖构图（忽略 E6 六色约束）
+// 古建筑页专属风格：界画测绘图风——建筑全景（含环境配景），赭石淡彩 + 仿古纸底，
+// 竖构图配古籍竖排版式（图片内容不设限，以完整展示建筑为主）
 const ARCH_STYLE_PROMPT =
-  "absolutely no text, no calligraphy, no inscriptions, no seals, no stamps, no borders, no decorations around the building, " +
-  "precise architectural elevation illustration of an ancient Chinese wooden tower pavilion filling the entire frame, " +
-  "traditional jiehua painting style, fine ink linework with ochre and umber wash on warm beige antique paper, " +
-  "detailed dougong brackets and grey tiled roofs, stone base with central stairs, " +
-  "vertical composition, highly detailed";
+  "traditional Chinese jiehua architectural painting, full view of an ancient wooden tower pavilion with its surroundings, " +
+  "fine ink linework with ochre and umber wash on warm beige antique paper, " +
+  "detailed dougong brackets and grey tiled roofs, stone base, trees and distant hills, " +
+  "vertical scroll composition, highly detailed";
 
 /**
  * 生图并把**图片字节落地到 KV**。
