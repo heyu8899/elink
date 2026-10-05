@@ -95,7 +95,11 @@ async function glm(prompt, env) {
       body: JSON.stringify({
         model: MODEL,
         messages: [{ role: "user", content: prompt }],
-        temperature: 0.9,
+        temperature: 1,
+        top_p: 0.95,
+        // GLM-5.3-Flash 是始终思考模型：thinking 仅支持 enabled；
+        // 关闭思考链会直接报 400，这里保留默认并让 reasoning_effort 走 low 控制成本
+        reasoning_effort: "low",
       }),
     });
     if (res.ok) {
