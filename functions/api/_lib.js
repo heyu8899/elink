@@ -332,13 +332,13 @@ function renderArchitecture(d) {
       <div id="archFallback" style="width:100%;height:100%;display:none;align-items:center;justify-content:center;font-size:60px;font-weight:bold;color:${s.bg};">${d.name}</div>
       ${imgBlock}
     </div>
-    <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0 50px;text-align:center;">
-      <div style="font-size:26px;font-weight:bold;letter-spacing:3px;line-height:1.65;">「${d.quote}」</div>
-      <div style="margin-top:8px;font-size:15px;color:${s.text};opacity:.55;letter-spacing:2px;">—— ${d.source}</div>
+    <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0 36px;text-align:center;">
+      <div style="font-size:31px;font-weight:bold;letter-spacing:3px;line-height:1.6;">「${d.quote}」</div>
+      <div style="margin-top:10px;font-size:18px;color:${s.text};opacity:.78;letter-spacing:3px;">—— ${d.source}</div>
     </div>
-    <div style="height:64px;flex-shrink:0;background:${s.accent};color:${s.bg};display:flex;justify-content:space-between;align-items:center;padding:0 30px;">
-      <span style="font-size:25px;font-weight:bold;letter-spacing:2px;">${d.name}</span>
-      <span style="font-size:16px;opacity:.94;">${d.era} · ${d.location}</span>
+    <div style="height:66px;flex-shrink:0;background:${s.accent};color:${s.bg};display:flex;justify-content:space-between;align-items:center;padding:0 30px;">
+      <span style="font-size:28px;font-weight:bold;letter-spacing:2px;">${d.name}</span>
+      <span style="font-size:18px;opacity:.94;">${d.era} · ${d.location}</span>
     </div>
   </div>`);
   }
