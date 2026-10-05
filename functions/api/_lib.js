@@ -111,6 +111,60 @@ function withExtra(basePrompt, extraPrompt) {
     : basePrompt;
 }
 
+// ---------- 内容去重（近期主题避开） ----------
+// 每页维护"最近展示过的主题"列表（KV history:{page}），生成时注入提示词
+// 让 GLM 避开；若仍返回重复主题，加强语气重试一次。weather 用真实数据不需要。
+
+const MAX_HISTORY = 25;
+
+export async function getHistory(kv, name) {
+  const raw = await kv.get(`history:${name}`);
+  try {
+    const arr = raw ? JSON.parse(raw) : [];
+    return Array.isArray(arr) ? arr.filter((x) => typeof x === "string" && x) : [];
+  } catch {
+    return [];
+  }
+}
+
+async function pushHistory(kv, name, item) {
+  const hist = await getHistory(kv, name);
+  const next = [item, ...hist.filter((h) => h !== item)].slice(0, MAX_HISTORY);
+  await kv.put(`history:${name}`, JSON.stringify(next));
+}
+
+// 主题字段：quote 是 text，其他页是 name
+function topicOf(d) {
+  return String((d && (d.name || d.text)) || "").trim();
+}
+
+/**
+ * 带去重的页面内容生成。
+ * @returns {Promise<{data: object, style: object}>}
+ */
+async function genDeduped(kv, page, env, basePrompt) {
+  const cfg = await getPageConfig(kv, page);
+  const hist = await getHistory(kv, page);
+  const avoid = hist.length
+    ? `注意：以下主题最近已展示过，必须避开：${hist.join("、")}。`
+    : "";
+
+  let data = parseLoose(await glm(withExtra(avoid + basePrompt, cfg.extraPrompt), env));
+
+  // 模型没听话仍返回重复主题时，加强语气重试一次
+  const topic = topicOf(data);
+  if (topic && hist.includes(topic)) {
+    const retry =
+      `${basePrompt}重要：${topic} 刚刚展示过，绝对不可以再选，请换一个完全不同的主题。${avoid}`;
+    data = parseLoose(await glm(withExtra(retry, cfg.extraPrompt), env));
+  }
+
+  const finalTopic = topicOf(data);
+  if (finalTopic) await pushHistory(kv, page, finalTopic);
+
+  return { data, style: cfg.style };
+}
+
 // ---------- 认证（会话 Cookie + 管理密钥双轨） ----------
 
 const SESSION_COOKIE = "epd_session";
@@ -351,16 +405,9 @@ async function glm(prompt, env) {
 // ---------- 各页面生成（读用户配置：提示词附加要求 + 风格） ----------
 
 export async function genQuote(dateStr, env) {
-  const cfg = await getPageConfig(env.DASHBOARD_KV, "quote");
-  const raw = await glm(
-    withExtra(
-      `请返回严格 JSON（不要 markdown 代码块）：{"text":"一句不超过22字的中文名言或诗句","from":"出处/作者"}。要求：适合电子墨水屏每日一言，避开烂大街的句子。`,
-      cfg.extraPrompt
-    ),
-    env
-  );
-  const d = parseLoose(raw);
-  return renderQuote({ date: dateStr, style: cfg.style, ...d });
+  const { data, style } = await genDeduped(env.DASHBOARD_KV, "quote", env,
+    `请返回严格 JSON（不要 markdown 代码块）：{"text":"一句不超过22字的中文名言或诗句","from":"出处/作者"}。要求：适合电子墨水屏每日一言，避开烂大街的句子。`);
+  return renderQuote({ date: dateStr, style, ...data });
 }
 
 // 天气数据用 open-meteo 免费 API（无 Key，国内可用）
@@ -388,29 +435,15 @@ export async function genWeather(dateStr, env) {
 }
 
 export async function genArchitecture(dateStr, env) {
-  const cfg = await getPageConfig(env.DASHBOARD_KV, "architecture");
-  const raw = await glm(
-    withExtra(
-      `请随机选一座中国著名古建筑（避开最常见的故宫/长城），返回严格 JSON：{"name":"名称","location":"所在地","era":"年代","desc":"约90字的介绍","highlight":"一个看点，不超过20字"}。`,
-      cfg.extraPrompt
-    ),
-    env
-  );
-  const d = parseLoose(raw);
-  return renderArchitecture({ date: dateStr, style: cfg.style, ...d });
+  const { data, style } = await genDeduped(env.DASHBOARD_KV, "architecture", env,
+    `请随机选一座中国著名古建筑（避开最常见的故宫/长城），返回严格 JSON：{"name":"名称","location":"所在地","era":"年代","desc":"约90字的介绍","highlight":"一个看点，不超过20字"}。`);
+  return renderArchitecture({ date: dateStr, style, ...data });
 }
 
 export async function genExtinct(dateStr, env) {
-  const cfg = await getPageConfig(env.DASHBOARD_KV, "extinct");
-  const raw = await glm(
-    withExtra(
-      `请随机选一种已灭绝动物（避免连续重复常见选项），返回严格 JSON：{"name":"中文名","latin":"拉丁学名","year":"灭绝年份","desc":"约80字的介绍","note":"一句不超过25字的警示语"}。`,
-      cfg.extraPrompt
-    ),
-    env
-  );
-  const d = parseLoose(raw);
-  return renderExtinct({ date: dateStr, style: cfg.style, ...d });
+  const { data, style } = await genDeduped(env.DASHBOARD_KV, "extinct", env,
+    `请随机选一种已灭绝动物（避免连续重复常见选项），返回严格 JSON：{"name":"中文名","latin":"拉丁学名","year":"灭绝年份","desc":"约80字的介绍","note":"一句不超过25字的警示语"}。`);
+  return renderExtinct({ date: dateStr, style, ...data });
 }
 
 // ---------- 地标建筑页：诗词 + AI 生图（E6 墨水屏适配） ----------
@@ -502,20 +535,12 @@ function renderLandmark(d) {
 }
 
 export async function genLandmark(dateStr, env) {
-  const cfg = await getPageConfig(env.DASHBOARD_KV, "landmark");
-  // 第一步：LLM 出主题 + 配套诗词（诗词与地标强关联）
-  const raw = await glm(
-    withExtra(
-      `请随机选一个中国城市的一处地标建筑或自然景观（每天不重复，兼顾知名与新颖），并配一句与之意境契合的古诗词。返回严格 JSON（不要代码块）：` +
-      `{"name":"地标名称","location":"省市名","poem":"一句古诗（含标点不超过20字）","poemSource":"诗名·作者","desc":"地标一句话介绍，不超过40字",` +
-      `"imagePrompt":"英文提示词，描述该地标的标志性外观与周围环境，简洁的扁平插画风格场景构图，30个英文单词以内"}`,
-      cfg.extraPrompt
-    ),
-    env
-  );
-  const d = parseLoose(raw);
+  const { data: d, style } = await genDeduped(env.DASHBOARD_KV, "landmark", env,
+    `请随机选一个中国城市的一处地标建筑或自然景观（兼顾知名与新颖），并配一句与之意境契合的古诗词。返回严格 JSON（不要代码块）：` +
+    `{"name":"地标名称","location":"省市名","poem":"一句古诗（含标点不超过20字）","poemSource":"诗名·作者","desc":"地标一句话介绍，不超过40字",` +
+    `"imagePrompt":"英文提示词，描述该地标的标志性外观与周围环境，简洁的扁平插画风格场景构图，30个英文单词以内"}`);
 
-  // 第二步：拼上 E6 墨水屏风格约束后生图并落地 KV；失败不阻塞整页（文字照常出）
+  // 拼上 E6 墨水屏风格约束后生图并落地 KV；失败不阻塞整页（文字照常出）
   let hasImage = false;
   try {
     await genImage(`${d.imagePrompt}. ${E6_STYLE_PROMPT}`, env);
@@ -526,7 +551,7 @@ export async function genLandmark(dateStr, env) {
 
   // 版本号：让设备每天拿到新图，而不是缓存里的旧图
   const imageVer = String(Date.now());
-  return renderLandmark({ date: dateStr, style: cfg.style, hasImage, imageVer, ...d });
+  return renderLandmark({ date: dateStr, style, hasImage, imageVer, ...d });
 }
 
 // 页面名 → 生成函数（generate 全量与 refresh 单页共用）

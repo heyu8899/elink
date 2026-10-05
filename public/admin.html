@@ -100,6 +100,7 @@
     <p class="muted" style="margin-top:10px">风格 JSON（可留空）。字段：colors{bg,text,accent} / font{titleSize 16-120, bodySize 12-60, family:serif|sans} / layout{writingMode:horizontal|vertical 仅一言古建筑生效, align:left|center 仅一言生效}。颜色用 #RRGGBB，推荐墨水屏高对比色：</p>
     <textarea id="styleTa" rows="6" style="width:100%;box-sizing:border-box;font-size:13px;padding:8px;border:1px solid #ccc;border-radius:6px;font-family:monospace;"
       placeholder='{"colors":{"accent":"#C0392B"},"font":{"titleSize":44},"layout":{"writingMode":"vertical"}}'></textarea>
+    <p class="muted" id="histLine" style="margin-top:8px"></p>
     <div class="row" style="margin-top:10px">
       <button class="primary" onclick="savePageConfig()">保存配置</button>
       <span class="muted">保存后点上方对应页面的"刷新此页"即可看到效果。</span>
@@ -299,6 +300,10 @@ async function loadPageConfig() {
   if (status === 403) return showLogin();
   document.getElementById("promptTa").value = ok ? data.prompt : "";
   document.getElementById("styleTa").value = ok ? data.style : "";
+  document.getElementById("histLine").textContent =
+    ok && data.history && data.history.length
+      ? `近期已展示（生成时自动避开，最多记 25 条）：${data.history.join("、")}`
+      : "暂无历史记录";
   setPcfgMsg(ok ? "" : (data.error || "加载失败"), "err");
 }
 

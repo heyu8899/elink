@@ -11,7 +11,7 @@
  * （在管理页点"刷新此页"即可立即看到效果）。
  */
 
-import { requireAdmin, PAGE_NAMES, normStyle, jsonResponse } from "../_lib.js";
+import { requireAdmin, PAGE_NAMES, normStyle, getHistory, jsonResponse } from "../_lib.js";
 
 function checkPage(params) {
   const name = params.page;
@@ -30,11 +30,12 @@ export async function onRequestGet({ params, request, env }) {
   const { name, error } = checkPage(params);
   if (error) return error;
 
-  const [prompt, styleRaw] = await Promise.all([
+  const [prompt, styleRaw, history] = await Promise.all([
     kv.get(`prompt:${name}`),
     kv.get(`style:${name}`),
+    getHistory(kv, name),
   ]);
-  return jsonResponse({ ok: true, page: name, prompt: prompt || "", style: styleRaw || "" });
+  return jsonResponse({ ok: true, page: name, prompt: prompt || "", style: styleRaw || "", history });
 }
 
 export async function onRequestPut({ params, request, env }) {
