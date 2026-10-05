@@ -319,10 +319,10 @@ function renderWeather(d) {
 
 function renderArchitecture(d) {
   const s = d.style;
-  // 有图：图区零遮挡 → 古籍引文（大字居中 + 出处）→ 底部名称条（名称 · 年代 · 地点）
-  // 字体：霞鹜文楷屏显版（写刻本楷体，古籍气质），CDN 加载失败时回退 Noto Serif SC
+  // 有图：古籍立轴版式——左竖图（界画测绘风 768×1280）、右竖排引文（vertical-rl 从右往左），名称沉底
+  // 字体：京华老宋体（雕版宋复刻），文楷兜底
   if (d.hasImage) {
-    const imgBlock = `<img src="/api/img/architecture?v=${d.imageVer}" alt="${d.name}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center 35%;display:block;"
+    const imgBlock = `<img src="/api/img/architecture?v=${d.imageVer}" alt="${d.name}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center 45%;display:block;"
          onerror="this.style.display='none';document.getElementById('archFallback').style.display='flex';">`;
     const archFont = `'KingHwa OldSong','LXGW WenKai Screen',${s.fontFamily}`;
     const fontFace = `@font-face { font-family:'KingHwa OldSong'; src:url('/fonts/kinghwa-oldsong-subset.woff2') format('woff2'); font-weight:400; font-style:normal; font-display:swap; }
@@ -333,21 +333,23 @@ function renderArchitecture(d) {
        html, body { width: 800px; height: 480px; overflow: hidden; font-family: ${archFont}; background: ${s.bg}; color: ${s.text}; }`,
       `
   <div style="width:800px;height:480px;background:${s.bg};display:flex;flex-direction:column;">
-    <div style="position:relative;height:300px;flex-shrink:0;background:${s.accent};">
-      <div id="archFallback" style="width:100%;height:100%;display:none;align-items:center;justify-content:center;font-size:60px;font-weight:bold;color:${s.bg};">${d.name}</div>
-      ${imgBlock}
+    <div style="flex:1;display:flex;overflow:hidden;">
+      <div style="position:relative;width:400px;flex-shrink:0;background:${s.accent};">
+        <div id="archFallback" style="width:100%;height:100%;display:none;align-items:center;justify-content:center;font-size:52px;font-weight:bold;color:${s.bg};writing-mode:vertical-rl;letter-spacing:10px;">${d.name}</div>
+        ${imgBlock}
+      </div>
+      <div style="flex:1;writing-mode:vertical-rl;padding:30px 28px;display:flex;justify-content:flex-start;background:${s.bg};">
+        <div style="font-size:27px;font-weight:bold;letter-spacing:6px;line-height:2;color:${s.text};height:100%;">「${d.quote}」</div>
+        <div style="font-size:17px;color:${s.text};opacity:.75;letter-spacing:5px;height:100%;padding-top:8px;">${d.source}</div>
+      </div>
     </div>
-    <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0 36px;text-align:center;">
-      <div style="font-size:31px;font-weight:bold;letter-spacing:3px;line-height:1.6;">「${d.quote}」</div>
-      <div style="margin-top:10px;font-size:20px;font-weight:700;color:${s.text};opacity:.9;letter-spacing:3px;">—— ${d.source}</div>
-    </div>
-    <div style="height:66px;flex-shrink:0;background:${s.accent};color:${s.bg};display:flex;justify-content:space-between;align-items:center;padding:0 30px;">
+    <div style="height:64px;flex-shrink:0;background:${s.accent};color:${s.bg};display:flex;justify-content:space-between;align-items:center;padding:0 30px;">
       <span style="font-size:28px;font-weight:bold;letter-spacing:2px;">${d.name}</span>
       <span style="font-size:18px;opacity:.94;">${d.era} · ${d.location}</span>
     </div>
   </div>`);
   }
-  // 无图降级：accent 名称栏 + 引文居中（同样应用文楷）
+  // 无图降级：名称竖排大字 + 引文竖排（同为古籍立轴风）
   const archFont = `'KingHwa OldSong','LXGW WenKai Screen',${s.fontFamily}`;
   const fontFace = `@font-face { font-family:'KingHwa OldSong'; src:url('/fonts/kinghwa-oldsong-subset.woff2') format('woff2'); font-weight:400; font-style:normal; font-display:swap; }
                        @font-face { font-family:'LXGW WenKai Screen'; src:url('/fonts/lxgw-wenkai-screen-subset.woff2') format('woff2'); font-weight:400; font-style:normal; font-display:swap; }`;
@@ -357,14 +359,12 @@ function renderArchitecture(d) {
      html, body { width: 800px; height: 480px; overflow: hidden; font-family: ${archFont}; background: ${s.bg}; color: ${s.text}; }`,
     `
   <div style="width:800px;height:480px;background:${s.bg};display:flex;">
-    <div style="width:340px;background:${s.accent};color:${s.bg};padding:40px 32px;box-sizing:border-box;display:flex;flex-direction:column;">
-      <div style="font-size:34px;font-weight:bold;line-height:1.4;">${d.name}</div>
-      <div style="font-size:17px;margin-top:auto;opacity:.9;">${d.era}</div>
-      <div style="font-size:15px;margin-top:4px;opacity:.75;">${d.location}</div>
+    <div style="width:320px;background:${s.accent};color:${s.bg};writing-mode:vertical-rl;display:flex;align-items:center;justify-content:center;padding:30px 0;">
+      <div style="font-size:44px;font-weight:bold;letter-spacing:10px;">${d.name}</div>
     </div>
-    <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0 40px;text-align:center;">
-      <div style="font-size:24px;font-weight:bold;letter-spacing:3px;line-height:1.7;">「${d.quote}」</div>
-      <div style="margin-top:12px;font-size:19px;font-weight:700;color:${s.text};opacity:.9;letter-spacing:3px;">—— ${d.source}</div>
+    <div style="flex:1;writing-mode:vertical-rl;padding:32px 30px;display:flex;justify-content:flex-start;">
+      <div style="font-size:25px;font-weight:bold;letter-spacing:5px;line-height:2;height:100%;">「${d.quote}」</div>
+      <div style="font-size:16px;opacity:.75;letter-spacing:4px;height:100%;padding-top:10px;">${d.source}</div>
     </div>
   </div>`);
 }
@@ -501,7 +501,7 @@ export async function genArchitecture(dateStr, env) {
     }
     if (!imagePrompt) throw new Error("缺少画面描述");
 
-    await genImage(`${imagePrompt}. ${ARCH_STYLE_PROMPT}`, env, "architecture");
+    await genImage(`${imagePrompt}. ${ARCH_STYLE_PROMPT}`, env, "architecture", "768x1280");
     hasImage = true;
   } catch (e) {
     console.error("古建筑生图失败，页面使用占位版式:", String(e));
@@ -527,13 +527,13 @@ const E6_STYLE_PROMPT =
 
 const IMAGE_SIZE = "1280x768"; // 5:3 比例生成，展示时缩放为 800x480
 
-// 古建筑页专属风格：手绘线描 + 淡彩写生（用户提供的建筑设定稿参考），
-// 与地标的扁平六色插画刻意区分。线描要求"自信粗线"以适应墨水屏缩放后的可读性。
+// 古建筑页专属风格：界画测绘图风（用户参考图）——精细木构立面线描 + 赭石淡彩 +
+// 仿古纸底 + 两侧竖排汉字注记，竖构图配古籍竖排版式（忽略 E6 六色约束）
 const ARCH_STYLE_PROMPT =
-  "traditional Chinese architecture concept sketch, fine ink line drawing with light watercolor wash, " +
-  "muted ochre, grey-tile and pale green tones on aged off-white paper, " +
-  "hand-drawn study of an ancient Chinese building, loose confident linework, subtle ink shading, " +
-  "high contrast lines, single composition, no modern elements, landscape 5:3";
+  "traditional Chinese jiehua architectural painting, precise elevation drawing of an ancient wooden tower pavilion, " +
+  "fine ink linework with ochre and umber wash on warm beige antique paper, " +
+  "detailed dougong brackets and grey tiled roofs, stone base with central stairs, " +
+  "small vertical Chinese calligraphy annotations on both sides, vertical scroll composition, highly detailed";
 
 /**
  * 生图并把**图片字节落地到 KV**。
@@ -544,7 +544,7 @@ const ARCH_STYLE_PROMPT =
  *
  * @returns {Promise<number>} 图片字节数
  */
-export async function genImage(prompt, env, key = "landmark") {
+export async function genImage(prompt, env, key = "landmark", size = IMAGE_SIZE) {
   const res = await fetch("https://open.bigmodel.cn/api/paas/v4/images/generations", {
     method: "POST",
     headers: {
@@ -554,7 +554,7 @@ export async function genImage(prompt, env, key = "landmark") {
     body: JSON.stringify({
       model: "cogview-4",       // 智谱生图模型，走同一个 GLM_API_KEY
       prompt,
-      size: IMAGE_SIZE,
+      size,
       // 关掉「AI生成」角标水印；若智谱账号未签署水印免责声明，此参数可能不生效
       // （图片仍带水印，但不会导致生成失败）
       watermark_enabled: false,
