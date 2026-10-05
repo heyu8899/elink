@@ -214,6 +214,9 @@ async function genImage(prompt, env) {
       model: "cogview-4",       // 智谱生图模型，走同一个 GLM_API_KEY
       prompt,
       size: IMAGE_SIZE,
+      // 关掉「AI生成」角标水印；若智谱账号未签署水印免责声明，此参数可能不生效
+      // （图片仍带水印，但不会导致生成失败）
+      watermark_enabled: false,
     }),
   });
   if (!res.ok) throw new Error(`CogView HTTP ${res.status}: ${await res.text()}`);
