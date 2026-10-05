@@ -528,8 +528,10 @@ const IMAGE_SIZE = "1280x768"; // 5:3 比例生成，展示时缩放为 800x480
 // 古建筑页专属风格：界画测绘图风——建筑全景（含环境配景），赭石淡彩 + 仿古纸底，
 // 竖构图配古籍竖排版式（图片内容不设限，以完整展示建筑为主）
 const ARCH_STYLE_PROMPT =
+  "STRICT STYLE: entire image must be on warm beige aged antique paper background, muted low-saturation colors only, " +
+  "soft ochre umber and pale green-grey washes, faded ink look, no bright saturated colors, no blue sky, no orange sunset sky, " +
   "traditional Chinese jiehua architectural painting, full view of an ancient wooden tower pavilion with its surroundings, " +
-  "fine ink linework with ochre and umber wash on warm beige antique paper, " +
+  "fine ink linework, " +
   "detailed dougong brackets and grey tiled roofs, stone base, trees and distant hills, " +
   "vertical scroll composition, highly detailed";
 
